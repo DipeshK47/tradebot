@@ -411,8 +411,24 @@ async function init(){
     if(isScanning){ await post("/api/scan/stop"); sb.textContent="stopping…"; return; }
     isScanning=true; sb.classList.add("stopping"); sb.textContent="■ STOP  starting…";
     const scanners=[...document.querySelectorAll('#scanners input:checked')].map(c=>c.dataset.sc);
-    await post("/api/scan",{segment:$("#segment").value, scanners, tf:$("#scanTf").value});
+    let r;
+    try{
+      r=await post("/api/scan",{segment:$("#segment").value, scanners, tf:$("#scanTf").value});
+    }catch(e){                                   // server unreachable / backend crash
+      isScanning=false; sb.classList.remove("stopping"); sb.textContent="▶ RUN SCAN";
+      alert("⚠ Scan failed — the server isn't reachable or the backend errored.\n\n"+(e&&e.message||e)+"\n\nIs the app window still running?");
+      return;
+    }
     await loadAlerts(); await loadState();
+    if(!r || r.detail || r.status==="error"){     // backend returned an error
+      alert("⚠ Scan failed (backend error):\n\n"+((r&&r.detail)||"unknown error"));
+    }else if(r.status==="already_running"){
+      alert("A scan is already running — wait for it to finish.");
+    }else if(r.errors>0){                          // couldn't fetch data for some symbols
+      alert(`⚠ Couldn't get data for ${r.errors} symbol(s).\n\nUsually Upstox rate-limiting — wait about a minute, then scan again.`);
+    }else if(r.alerts===0 && !marketOpen){         // market closed -> no fresh data to scan
+      alert("ℹ Market is closed (live 9:15 AM – 3:30 PM IST).\n\nNo fresh signals right now — there's no live data to scan. Try during market hours.");
+    }
   };
   $("#clearBtn").onclick=async()=>{await post("/api/alerts/clear");await loadAlerts();};
   $("#armSwitch").onclick=async()=>{
