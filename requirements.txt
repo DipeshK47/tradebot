@@ -2,6 +2,7 @@
 # needs NONE of these; it is pure-stdlib and unit-tested as-is.
 
 # Broker + data
+upstox-python-sdk>=2.27   # live market-data websocket (MarketDataStreamerV3); REST is stdlib
 dhanhq>=2.0
 websockets>=12.0
 httpx>=0.27

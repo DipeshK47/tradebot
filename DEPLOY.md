@@ -6,52 +6,50 @@ websocket, exchanges OAuth tokens server-side, and keeps secrets in `.env`.
 **GitHub Pages serves only static files and cannot run any of this.** GitHub is for
 source control; deploy the running app to a host that executes Python.
 
-## Recommended: Oracle Cloud Always-Free VPS (ap-mumbai-1)
-Always-on, ₹0, low latency to NSE — the original plan.
+## Recommended: Oracle Cloud Always-Free VPS (Mumbai/Hyderabad)
+Always-on, ₹0, low latency to NSE. **Access model: SSH tunnel** — the server binds to
+`127.0.0.1` only, so NO public port is exposed and your `http://127.0.0.1:8000/...`
+OAuth redirect keeps working unchanged. The bot runs 24/7 on the VM; you tunnel in
+from your laptop only to view the dashboard / log in.
 
-1. Create an **Always-Free** VM (Ampere/A1, Ubuntu), reserve a static public IP.
-2. SSH in, then:
-   ```bash
-   sudo apt update && sudo apt install -y python3-venv git
-   git clone https://github.com/DipeshK47/tradebot.git && cd tradebot
-   python3 -m venv .venv && . .venv/bin/activate
-   pip install -r requirements.txt
-   cp .env.example .env && chmod 600 .env   # then fill in API key/secret
-   ```
-3. **Upstox app console** → set the Redirect URI to your server's callback and put the
-   SAME value in `.env`:
-   ```
-   UPSTOX_REDIRECT_URI=http://<your-static-ip>:8000/auth/upstox/callback
-   ```
-   (Use `https://yourdomain/...` once you add a domain + TLS.)
-4. Run it (foreground test):
-   ```bash
-   PYTHONPATH=src DOTENV_PATH=.env python3 scripts/run_dashboard.py
-   ```
-   Open `http://<ip>:8000`, click **Login with Upstox** — the token is captured and
-   saved to `.env` automatically (no daily `--code` step).
+### A. Create the VM (Oracle console)
+1. Sign up at cloud.oracle.com (card for ID check only; Always-Free = ₹0). **Region:
+   ap-mumbai-1** (or ap-hyderabad-1).
+2. **Compute → Instances → Create**. Image **Canonical Ubuntu 22.04**. Shape:
+   **VM.Standard.A1.Flex** (ARM, free up to 4 OCPU/24 GB — best) or, if A1 capacity is
+   unavailable, **VM.Standard.E2.1.Micro** (1 OCPU/1 GB — always available; enough for
+   the dashboard).
+3. **SSH keys**: on your laptop `ssh-keygen -t ed25519 -f ~/.ssh/algodesk`, upload
+   `~/.ssh/algodesk.pub`. Create the instance.
+4. **Networking → Reserve a static public IP** (convert the ephemeral IP to reserved).
+5. Leave the firewall CLOSED (only SSH/22). No need to open 8000 — we tunnel.
 
-### Keep it always-on (systemd)
-`/etc/systemd/system/algodesk.service`:
-```ini
-[Unit]
-Description=ALGODESK dashboard
-After=network-online.target
-[Service]
-WorkingDirectory=/home/ubuntu/tradebot
-Environment=PYTHONPATH=src
-Environment=DOTENV_PATH=/home/ubuntu/tradebot/.env
-ExecStart=/home/ubuntu/tradebot/.venv/bin/python scripts/run_dashboard.py
-Restart=always
-User=ubuntu
-[Install]
-WantedBy=multi-user.target
-```
+### B. Configure the app (one command on the VM)
+SSH in: `ssh -i ~/.ssh/algodesk ubuntu@<VM_IP>`, then:
 ```bash
-sudo systemctl enable --now algodesk
+curl -fsSLO https://raw.githubusercontent.com/DipeshK47/tradebot/main/scripts/vps_setup.sh
+bash vps_setup.sh
 ```
-Lock the firewall to your IP (or front it with Caddy/Nginx + TLS + basic auth — the
-dashboard has no user login of its own).
+This installs Python, clones the repo, makes a venv with the slim deps
+(`requirements-dashboard.txt`), creates `.env` (chmod 600), and installs a systemd
+service. Then:
+```bash
+nano ~/tradebot/.env          # set UPSTOX_API_KEY + UPSTOX_API_SECRET (leave redirect as-is)
+sudo systemctl restart algodesk
+systemctl status algodesk --no-pager
+```
+
+### C. Open the dashboard (from your laptop)
+```bash
+ssh -i ~/.ssh/algodesk -L 8000:127.0.0.1:8000 ubuntu@<VM_IP>
+```
+Browse to `http://127.0.0.1:8000` → **Login with Upstox** (the token is captured and
+saved to `.env` on the VM automatically). Make sure `http://127.0.0.1:8000/auth/upstox/callback`
+is registered in your Upstox app console (it already is).
+
+Notes: token expires ~3:30 AM IST daily → re-open the tunnel and click Login (the
+public historical/intraday scans keep working token-free meanwhile). Autorun is OFF
+after a restart — turn it on in the UI each session (persistent autostart is a TODO).
 
 ## Alternatives
 - **Railway / Fly.io** — connect the GitHub repo, set env vars in their dashboard,

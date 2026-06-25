@@ -1,0 +1,6 @@
+# Minimal deps to RUN THE DASHBOARD on a small VM.
+# Scanning/charts use the stdlib (urllib) — only the live websocket needs the SDK.
+# Use this on a 1 GB micro VM to avoid the heavy backtest stack in requirements.txt.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+upstox-python-sdk>=2.27
