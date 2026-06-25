@@ -1,0 +1,42 @@
+# Runtime — installed on the VPS later. The safety core (risk/strategies/models)
+# needs NONE of these; it is pure-stdlib and unit-tested as-is.
+
+# Broker + data
+dhanhq>=2.0
+websockets>=12.0
+httpx>=0.27
+pandas>=2.2
+polars>=1.0
+numpy>=1.26
+talipp>=2.0            # incremental (O(1)/tick) indicators for the live scanner
+
+# Backtesting (Phase 2)
+vectorbt>=0.26
+backtesting>=0.3.3
+
+# Storage
+SQLAlchemy>=2.0
+"psycopg[binary]>=3.1"
+
+# Dashboard / API (Phase 1)
+fastapi>=0.110
+"uvicorn[standard]>=0.29"
+
+# Alerts / control
+python-telegram-bot>=21.0
+
+# News / sentiment (continuous)
+feedparser>=6.0
+beautifulsoup4>=4.12
+
+# Config / infra
+pydantic>=2.6
+pydantic-settings>=2.2
+PyYAML>=6.0
+APScheduler>=3.10
+python-dotenv>=1.0
+structlog>=24.1
+tenacity>=8.2
+
+# Dev
+pytest>=8.0

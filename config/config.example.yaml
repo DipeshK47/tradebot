@@ -1,0 +1,27 @@
+# Copy to config/config.yaml. The risk block is enforced by the fail-closed
+# RiskEngine — every cap MUST be a positive number or trading is denied.
+
+mode: paper                 # paper | live
+
+universe:
+  source: fno               # fno | nifty500 | custom
+  max_symbols: 250
+
+risk:
+  max_risk_per_trade_pct: 1.0
+  max_position_value: 50000        # ₹ per single position
+  max_total_exposure_value: 100000 # ₹ across all open positions
+  max_daily_loss: 2000             # ₹; hitting this halts trading for the day
+  max_open_positions: 5
+  max_orders_per_day: 50
+  arm_live: false                  # live trading stays OFF until armed each session
+
+strategies:
+  orb:
+    enabled: true
+    opening_range_minutes: 15
+    rr: 2.0
+
+alerts:
+  telegram: true
+  desktop: true

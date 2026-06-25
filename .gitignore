@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.env
+*.log
+.venv/
+venv/
+env/
+data/cache/
+*.sqlite
+*.db
+.pytest_cache/
+.DS_Store
+node_modules/
+dist/
+build/
+
+# secrets / runtime
+.env.*.tmp
+*.token
+# personal / large binaries
+*.HEIC
