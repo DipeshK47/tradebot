@@ -51,7 +51,21 @@ Notes: token expires ~3:30 AM IST daily → re-open the tunnel and click Login (
 public historical/intraday scans keep working token-free meanwhile). Autorun is OFF
 after a restart — turn it on in the UI each session (persistent autostart is a TODO).
 
-## Alternatives
+## Azure for Students (no credit card — verify with a .edu email)
+$100 credit/yr, no card. Same SSH-tunnel model; the bootstrap script is identical.
+1. Sign up: azure.microsoft.com/free/students (sign in with your school email).
+2. Portal → **Create a resource → Virtual machine**:
+   - Subscription **Azure for Students**, new resource group `algodesk-rg`
+   - Name `algodesk`, Region **Central India**, Image **Ubuntu Server 24.04 LTS**
+   - Size **Standard_B1s** (1 vCPU / 1 GiB)
+   - Auth **SSH public key**, username **`azureuser`**, paste `~/.ssh/algodesk.pub`
+   - Inbound ports: **SSH (22) only** (do NOT open 8000 — we tunnel)
+3. After create, copy the **Public IP** from the VM Overview, then follow **B + C
+   above** but SSH as **`azureuser@<IP>`** (not `ubuntu@`).
+4. Cost: B1s ≈ $8/mo, so the $100 credit covers ~a year; **Stop (deallocate)** the
+   VM when you're not trading to stretch it, and it renews $100 each year.
+
+## Other alternatives
 - **Railway / Fly.io** — connect the GitHub repo, set env vars in their dashboard,
   deploy. Pick an *always-on* plan (a sleeping free tier drops the websocket).
 - Any ₹400–600/mo micro-VPS (DigitalOcean/Linode) as a rock-solid fallback.
