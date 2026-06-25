@@ -444,7 +444,7 @@ async function init(){
   }catch(e){}
   setInterval(()=>$("#clock").textContent=new Date().toLocaleTimeString(),1000);
   setInterval(loadState,5000);   // keep live tick/bar counters fresh
-  setInterval(liveTick,2000);    // live chart: move the last candle off websocket ticks (no REST)
+  setInterval(liveTick,1000);    // live chart: move the last candle off websocket ticks every 1s (no REST)
 }
 init();
 </script>
