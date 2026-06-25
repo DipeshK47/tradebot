@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Trading Command Center</title>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root{--bg:#0a0e14;--panel:#0f141b;--panel2:#141b24;--border:#1f2937;--txt:#c9d1d9;
+        --muted:#7d8590;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--amber:#d29922}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--txt);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  #app{display:grid;grid-template-rows:48px 1fr 26px;grid-template-columns:262px 1fr 350px;
+       grid-template-areas:"head head head" "side main right" "foot foot foot";height:100vh}
+  header{grid-area:head;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--border)}
+  #side{grid-area:side;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  #main{grid-area:main;display:flex;flex-direction:column;min-width:0}
+  #right{grid-area:right;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  footer{grid-area:foot;display:flex;align-items:center;gap:18px;padding:0 14px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font-size:11px}
+  .logo{font-weight:700;letter-spacing:.5px}.logo span{color:var(--accent)}
+  .badge{padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.4px}
+  .badge.paper{background:#1f6feb33;color:#79c0ff;border:1px solid #1f6feb66}
+  .badge.live{background:#f8514933;color:#ff7b72;border:1px solid #f8514966}
+  .spacer{flex:1}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+  .dot.ok{background:var(--green)}.dot.bad{background:var(--red)}
+  .ctl{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+  .switch{position:relative;width:42px;height:21px;background:#30363d;border-radius:21px;cursor:pointer;transition:.2s}
+  .switch.on{background:var(--green)}
+  .switch.live.on{background:var(--accent)}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.2s}
+  .switch.on::after{left:23px}
+  button{font:inherit;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--txt);padding:6px 11px;border-radius:6px}
+  button:hover{border-color:var(--accent)}
+  .kill{background:#f8514922;border-color:#f8514966;color:#ff7b72;font-weight:600}
+  .kill:hover{background:#f8514944}
+  select,input.search{width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:7px}
+  .sec{padding:10px 12px;border-bottom:1px solid var(--border)}
+  .sec h3{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+  .listbox{flex:1;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+  .scroll{overflow-y:auto;flex:1}
+  .srow{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;cursor:pointer;border-bottom:1px solid #121922}
+  .srow:hover{background:var(--panel2)}
+  .srow.active{background:#1f6feb22}
+  .srow .add{padding:0 7px;font-size:13px;line-height:1.6;border-color:transparent;background:transparent;color:var(--muted)}
+  .srow .add:hover{color:var(--green)}
+  .wl .srow .rm{padding:0 7px;background:transparent;border-color:transparent;color:var(--muted)}
+  .wl .srow .rm:hover{color:var(--red)}
+  .scanbtn{width:100%;margin-top:8px;background:#238636;border-color:#2ea043;color:#fff;font-weight:600;padding:9px}
+  .scanbtn:hover{background:#2ea043}.scanbtn:disabled{opacity:.7;cursor:wait}
+  .scanbtn.stopping{background:#bb2d3b;border-color:#f85149}.scanbtn.stopping:hover{background:#c9303d}
+  .chk{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:12px}.chk input{accent-color:var(--accent)}
+  .mbar{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
+  .mbar .title{font-size:15px;font-weight:700}
+  .tf{display:flex;gap:4px}.tf button{padding:4px 10px;font-size:12px}
+  .tf button.active{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
+  #chart{flex:1;min-height:0}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted)}.legend i{width:16px;height:2px;display:inline-block;vertical-align:middle;margin-right:4px}
+  .indis{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .indis .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6e7681;margin-right:2px}
+  .chip-t{font-size:11px;padding:3px 9px;border-radius:12px;border:1px solid var(--border);color:#6e7681;cursor:pointer;user-select:none}
+  .chip-t:hover{border-color:var(--accent)}
+  .chip-t.on{background:#1f6feb22;border-color:#1f6feb66;color:var(--accent)}
+  .rhead{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .rhead h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  #alerts{flex:1;overflow-y:auto}
+  .alert{display:flex;gap:9px;padding:8px 12px;border-bottom:1px solid #161d27;align-items:flex-start;cursor:pointer}
+  .alert:hover{background:var(--panel2)}
+  .alert .tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;min-width:40px;text-align:center}
+  .alert.up .tag{background:#3fb95022;color:var(--green);border:1px solid #3fb95055}
+  .alert.down .tag{background:#f8514922;color:var(--red);border:1px solid #f8514955}
+  .alert.near .tag{background:#d2992222;color:var(--amber);border:1px solid #d2992255}
+  .alert .body{flex:1;min-width:0}
+  .alert .top{display:flex;justify-content:space-between;gap:6px}
+  .alert .sym{font-weight:700}
+  .alert .chip{font-size:10px;color:#04101f;background:var(--amber);border-radius:3px;padding:0 5px;font-weight:600}
+  .newb{font-size:9px;font-weight:700;background:#3fb950;color:#04101f;border-radius:3px;padding:1px 5px;letter-spacing:.5px;margin-left:5px}
+  .alert.isnew{border-left:2px solid #3fb950}
+  .alert .t{color:var(--muted);font-size:11px}
+  .alert .msg{color:var(--muted);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .port{border-top:1px solid var(--border);display:flex;flex-direction:column}
+  .kv{display:flex;justify-content:space-between;padding:5px 12px;font-size:12px}.kv .v{font-weight:600}
+  .bar{height:6px;background:#21262d;border-radius:3px;margin:3px 12px 8px;overflow:hidden}.bar>div{height:100%;background:var(--accent)}
+  .empty{padding:14px 12px;color:var(--muted);text-align:center;font-size:12px}
+  .warn{color:var(--amber)}
+  .count{color:var(--muted);font-weight:400}
+  /* login screen */
+  #loginScreen{position:fixed;inset:0;z-index:9999;background:radial-gradient(1200px 600px at 50% -10%,#10202e,#070b11 70%);display:none;align-items:center;justify-content:center}
+  .loginCard{width:380px;max-width:90vw;background:#0d1420;border:1px solid #1f2c3a;border-radius:14px;padding:34px 30px;text-align:center;box-shadow:0 24px 80px #000a}
+  .loginLogo{font-size:26px;font-weight:800;letter-spacing:1px;color:#e6edf3}.loginLogo span{color:var(--accent)}
+  .loginSub{color:var(--muted);font-size:12.5px;margin:6px 0 22px}
+  .loginBtn{display:block;background:linear-gradient(180deg,#7c5cff,#5b3df0);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:9px;text-decoration:none;border:none;cursor:pointer}
+  .loginBtn:hover{filter:brightness(1.08)}
+  .loginNote{color:var(--muted);font-size:11.5px;line-height:1.6;margin:16px 0 8px}
+  .loginSkip{display:inline-block;color:#58a6ff;font-size:12px;text-decoration:none;margin-top:6px}
+  .loginErr{color:var(--amber);font-size:11.5px;margin-top:12px;line-height:1.5}
+  .loginErr code{background:#0a0e14;border:1px solid #1f2c3a;border-radius:4px;padding:1px 5px;font-size:10.5px}
+  .logoutBtn{background:none;border:1px solid #30363d;color:var(--muted);border-radius:5px;font-size:10px;padding:2px 7px;cursor:pointer}
+  .logoutBtn:hover{border-color:#f85149;color:#f85149}
+</style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="loginCard">
+    <div class="loginLogo">⬡ ALGO<span>DESK</span></div>
+    <div class="loginSub">Indian market scanner &amp; trading command center</div>
+    <a href="/auth/upstox/login" class="loginBtn">🔒 Login with Upstox</a>
+    <div class="loginNote">Connects your Upstox account for the <b>live feed</b>, <b>options</b> &amp; quotes.<br>Charts &amp; historical scans work without login.</div>
+    <a href="#" id="loginSkip" class="loginSkip">Continue without login →</a>
+    <div id="loginErr" class="loginErr"></div>
+  </div>
+</div>
+<div id="app">
+  <header>
+    <div class="logo">⬡ ALGO<span>DESK</span></div>
+    <span id="modeBadge" class="badge paper">PAPER</span>
+    <span class="ctl">ARM <div id="armSwitch" class="switch"></div></span>
+    <span class="ctl">LIVE <div id="liveSwitch" class="switch live"></div></span>
+    <button id="killBtn" class="kill">■ KILL</button>
+    <div class="spacer"></div>
+    <span class="ctl"><span id="tokenDot" class="dot bad"></span><span id="tokenTxt">token</span></span>
+    <span class="mono" id="clock" style="color:var(--muted)"></span>
+  </header>
+
+  <aside id="side">
+    <div class="sec">
+      <h3>Universe filter</h3>
+      <select id="segment"></select>
+    </div>
+    <div class="listbox">
+      <div class="sec" style="border:none;padding-bottom:6px">
+        <h3>Stocks <span id="uniCount" class="count"></span></h3>
+        <input class="search" id="search" placeholder="search symbol…" autocomplete="off"/>
+      </div>
+      <div class="scroll" id="stockList"></div>
+    </div>
+    <div class="sec" style="max-height:30%;display:flex;flex-direction:column;overflow:hidden">
+      <h3>My Watchlist <span class="count" id="wlCount"></span></h3>
+      <div class="scroll wl" id="watchlist" style="margin:0 -12px"></div>
+    </div>
+    <div class="sec" id="scanners">
+      <h3>Scanners</h3>
+      <label class="chk"><input type="checkbox" data-sc="rsi_threshold" checked> RSI ≥ 60 (current)</label>
+      <label class="chk"><input type="checkbox" data-sc="rsi_momentum" checked> RSI momentum 50→60 (cross)</label>
+      <label class="chk"><input type="checkbox" data-sc="bollinger_breakout" checked> Bollinger breakout</label>
+      <label class="chk"><input type="checkbox" data-sc="prev_day_break" checked> Prev-day H/L break</label>
+      <label class="chk"><input type="checkbox" data-sc="bollinger_outside" checked> Bollinger outside band</label>
+      <label class="chk"><input type="checkbox" data-sc="option_rsi_confluence" checked> Options RSI ≥60 (opt &amp; underlying)</label>
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:12px">
+        <span style="color:var(--muted)">Timeframe</span>
+        <select id="scanTf" style="flex:1;padding:4px">
+          <option value="5min">5 min</option><option value="15min" selected>15 min</option>
+          <option value="30min">30 min</option><option value="1hour">1 hour</option>
+          <option value="day">day</option></select>
+      </div>
+      <button id="scanBtn" class="scanbtn">▶ RUN SCAN</button>
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:12px">
+        <span style="color:var(--muted)">⟳ Auto every</span>
+        <select id="autoInterval" style="flex:1;padding:4px">
+          <option value="300">5 min</option><option value="900" selected>15 min</option>
+          <option value="1800">30 min</option><option value="3600">1 hr</option>
+          <option value="86400">day</option></select>
+        <div id="autoSwitch" class="switch"></div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="mbar">
+      <div class="title" id="chartTitle">RELIANCE · 15min</div>
+      <div class="tf" id="tfBtns">
+        <button data-tf="15min" class="active">15m</button>
+        <button data-tf="1hour">1h</button>
+        <button data-tf="day">1D</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="indis" id="indis">
+        <span class="lbl">indicators</span>
+        <span class="chip-t on" data-ind="bands">BB bands</span>
+        <span class="chip-t on" data-ind="rsiline">RSI(14)</span>
+        <span class="chip-t on" data-ind="bollinger_breakout">BB break</span>
+        <span class="chip-t on" data-ind="rsi_momentum">RSI 50/60</span>
+        <span class="chip-t on" data-ind="prev_day_break">Prev-day</span>
+        <span class="chip-t on" data-ind="bollinger_outside">BB out</span>
+      </div>
+    </div>
+    <div id="chart"></div>
+  </main>
+
+  <aside id="right">
+    <div class="rhead"><h3>Live Alerts <span id="alertCount" class="count">0</span></h3>
+      <button id="clearBtn" style="padding:3px 9px;font-size:11px">clear</button></div>
+    <div id="alerts"><div class="empty">No alerts yet — pick a filter and hit <b>RUN SCAN</b>.</div></div>
+  </aside>
+
+  <footer>
+    <span id="statusScan">last scan: —</span>
+    <span id="statusUni"></span>
+    <span id="statusMode"></span>
+    <span class="spacer"></span>
+    <span class="warn" id="armWarn"></span>
+  </footer>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const api=async(p,o)=>(await fetch(p,o)).json();
+const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b||{})});
+let cur={symbol:"RELIANCE",tf:"15min"};
+let chart,candle,sUp,sMid,sLo,sRsi;
+let liveOn=false,lastBar=null,liveTf="15min",marketOpen=true;   // live on? + last candle + live tf + market open?
+let universeSyms=[];
+let isScanning=false;
+let chartMarkers=[];
+const markerShow={bollinger_breakout:true,rsi_momentum:true,prev_day_break:true,bollinger_outside:true};
+let bandsShow=true;
+let rsiShow=true;
+const WL_KEY="algodesk_watchlist";
+let watchlist=JSON.parse(localStorage.getItem(WL_KEY)||'["RELIANCE","HDFCBANK","INFY","TCS"]');
+const saveWL=()=>localStorage.setItem(WL_KEY,JSON.stringify(watchlist));
+
+function initChart(){
+  chart=LightweightCharts.createChart($("#chart"),{autoSize:true,
+    layout:{background:{color:"#0a0e14"},textColor:"#7d8590"},
+    grid:{vertLines:{color:"#141b24"},horzLines:{color:"#141b24"}},
+    timeScale:{timeVisible:true,secondsVisible:false,borderColor:"#1f2937"},
+    rightPriceScale:{borderColor:"#1f2937"},crosshair:{mode:0}});
+  candle=chart.addCandlestickSeries({upColor:"#3fb950",downColor:"#f85149",borderVisible:false,wickUpColor:"#3fb950",wickDownColor:"#f85149"});
+  sUp=chart.addLineSeries({color:"#d29922",lineWidth:1});
+  sMid=chart.addLineSeries({color:"#58a6ff",lineWidth:1,lineStyle:2});
+  sLo=chart.addLineSeries({color:"#d29922",lineWidth:1});
+  // RSI(14) in its own bottom sub-pane (separate price scale)
+  sRsi=chart.addLineSeries({priceScaleId:"rsi",color:"#a371f7",lineWidth:1,
+        lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false});
+  chart.priceScale("right").applyOptions({scaleMargins:{top:0.05,bottom:0.30}});
+  chart.priceScale("rsi").applyOptions({scaleMargins:{top:0.74,bottom:0.02}});
+  [60,50,40].forEach(lv=>sRsi.createPriceLine({price:lv,
+        color:(lv===60||lv===40)?"#a371f7aa":"#30363d",lineWidth:1,lineStyle:lv===50?3:2,
+        axisLabelVisible:true,title:String(lv)}));
+}
+function applyIndicators(){
+  [sUp,sMid,sLo].forEach(s=>s.applyOptions({visible:bandsShow}));
+  sRsi.applyOptions({visible:rsiShow});
+  candle.setMarkers(chartMarkers.filter(m=>markerShow[m.kind]!==false));
+}
+function zoomCurrentDay(cs){
+  // open the chart zoomed to TODAY's session (chart-time is IST-shifted, so day floor = IST midnight)
+  if(!cs||!cs.length) return;
+  if(cur.tf==="day"){ chart.timeScale().fitContent(); return; }    // daily candles: show full history
+  const last=cs[cs.length-1].time, dayStart=Math.floor(last/86400)*86400;
+  let i0=cs.findIndex(c=>c.time>=dayStart);
+  if(i0<0) i0=Math.max(0,cs.length-30);                            // no bars today yet -> last ~30 bars
+  try{ chart.timeScale().setVisibleLogicalRange({from:i0-1, to:cs.length+3}); }   // today + right padding
+  catch(e){ chart.timeScale().fitContent(); }
+}
+async function loadChart(zoom){
+  $("#chartTitle").textContent=`${cur.symbol} · ${cur.tf}`;
+  let d;
+  try{ d=await api(`/api/candles?symbol=${encodeURIComponent(cur.symbol)}&tf=${cur.tf}`); }
+  catch(e){ console.warn("chart fetch",e); return; }
+  if(!d || d.error || !(d.candles && d.candles.length)){
+    try{[candle,sUp,sMid,sLo,sRsi].forEach(s=>s.setData([]));}catch(e){}
+    const why=(d&&d.error&&d.error.indexOf("429")>=0)?"⚠ rate-limited — retry in a minute":(d&&d.error?"⚠ no data":"…");
+    $("#chartTitle").textContent=`${cur.symbol} · ${cur.tf}   ${why}`;
+    return;
+  }
+  try{ candle.setData(d.candles); if(zoom!==false) zoomCurrentDay(d.candles); }   // open zoomed to TODAY
+  catch(e){ console.warn("candles",e); }
+  lastBar=(d.candles&&d.candles.length)?{...d.candles[d.candles.length-1]}:null;  // track for live updates
+  if(liveOn) post("/api/live/watch",{symbol:cur.symbol}).catch(()=>{});  // stream THIS symbol live
+  try{
+    sUp.setData(d.bands.map(b=>({time:b.time,value:b.upper})));
+    sMid.setData(d.bands.map(b=>({time:b.time,value:b.mid})));
+    sLo.setData(d.bands.map(b=>({time:b.time,value:b.lower})));
+    sRsi.setData((d.rsi||[]).map(r=>({time:r.time,value:r.value})));
+  }catch(e){ console.warn("overlay",e); }
+  chartMarkers=d.markers||[];
+  try{ applyIndicators(); }catch(e){ console.warn("markers",e); }   // markers must never blank the chart
+}
+async function chartTo(sym,tf){
+  cur.symbol=sym; if(tf)cur.tf=tf;
+  $("#tfBtns").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.tf===cur.tf));
+  document.querySelectorAll(".srow").forEach(r=>r.classList.toggle("active",r.dataset.sym===sym));
+  await loadChart();
+}
+// Live chart: poll the websocket forming-bar (in-memory, no Upstox REST) and move the
+// last candle in real time. Appends a fresh 15-min candle when the bucket rolls over.
+async function liveTick(){
+  // Live-move only on 15-min: the server aggregator emits 15-min buckets, so 1h/day charts
+  // would otherwise fold sub-hour ticks into a stale bar (they refresh on reload instead).
+  // chart must match the live tf, AND only animate while the market is OPEN (no flicker after close)
+  if(!liveOn || !candle || cur.tf!==liveTf || !marketOpen) return;
+  let d; try{ d=await api("/api/live/prices"); }catch(e){ return; }
+  if(!d.live || !d.prices) return;
+  const p=d.prices[cur.symbol];
+  if(!p){ $("#chartTitle").textContent=`${cur.symbol} · ${cur.tf}   ○ live…`; return; }  // ticks not in yet
+  const lp=p.close;
+  try{
+    if(!lastBar){                                  // recovery: initial load failed (rate-limited) -> seed from live
+      lastBar={time:p.time,open:p.open,high:p.high,low:p.low,close:p.close};
+      candle.update(lastBar);
+    }else if(p.time>lastBar.time){                 // bucket rolled over -> append the new live bar
+      lastBar={time:p.time,open:p.open,high:p.high,low:p.low,close:p.close};
+      candle.update(lastBar);
+    }else if(p.time===lastBar.time){               // same bucket -> move close, stretch wick, keep TRUE open
+      lastBar={time:lastBar.time,open:lastBar.open,
+               high:Math.max(lastBar.high,lp),low:Math.min(lastBar.low,lp),close:lp};
+      candle.update(lastBar);
+    }                                              // p.time<lastBar.time (stale forming bar) -> ignore
+    $("#chartTitle").textContent=`${cur.symbol} · ${cur.tf}   ● ₹${lp.toLocaleString("en-IN")}`;
+  }catch(e){}
+}
+function renderStockList(){
+  // search filters WITHIN the currently-selected segment (switch segment to widen scope)
+  const terms=($("#search").value||"").toUpperCase().trim().split(/\s+/).filter(Boolean);
+  const m=terms.length?universeSyms.filter(s=>{const u=s.toUpperCase();return terms.every(t=>u.includes(t));}):universeSyms;
+  const CAP=500, shown=m.slice(0,CAP);
+  $("#stockList").innerHTML=shown.map(s=>
+    `<div class="srow ${s===cur.symbol?'active':''}" data-sym="${s}"><span>${s}</span><button class="add" data-add="${s}" title="add to watchlist">＋</button></div>`).join("")
+    + (m.length>CAP?`<div class="empty">showing ${CAP} of ${m.length} — type to narrow, e.g. "nifty 25000 ce"</div>`:(m.length?"":`<div class="empty">no match in ${$("#segment").value} — switch segment?</div>`));
+}
+function renderWatchlist(){
+  $("#wlCount").textContent=watchlist.length;
+  $("#watchlist").innerHTML=watchlist.length?watchlist.map(s=>
+    `<div class="srow" data-sym="${s}"><span>${s}</span><button class="rm" data-rm="${s}" title="remove">✕</button></div>`).join("")
+    :`<div class="empty">add stocks with ＋</div>`;
+}
+async function loadUniverse(seg){
+  const d=await api(`/api/universe?segment=${encodeURIComponent(seg)}`);
+  universeSyms=d.symbols||[];
+  $("#uniCount").textContent=`(${d.total})`;
+  $("#statusUni").textContent=`universe: ${seg} · ${d.total}`+(d.note?` · ${d.note}`:"");
+  renderStockList();
+}
+let loginDismissed=false;
+function updateLogin(s){
+  const el=$("#loginScreen"), err=$("#loginErr");
+  if(s.token_valid){ el.style.display="none"; loginDismissed=false; return; }
+  if(!s.oauth_ready){
+    err.innerHTML=`⚠ Set <code>UPSTOX_API_KEY</code> &amp; <code>UPSTOX_API_SECRET</code> in <code>.env</code> first.`;
+  }else{
+    err.innerHTML=`This exact Redirect URI must be registered in your Upstox app:<br><code>${s.redirect_uri||""}</code>`;
+  }
+  if(!loginDismissed) el.style.display="flex";
+}
+async function loadState(){
+  const s=await api("/api/state");
+  const mb=$("#modeBadge");mb.textContent=s.mode.toUpperCase();mb.className="badge "+s.mode;
+  $("#armSwitch").classList.toggle("on",s.armed);
+  $("#liveSwitch").classList.toggle("on",s.live);liveOn=s.live;liveTf=s.live_tf||"15min";marketOpen=s.market_open;
+  $("#autoSwitch").classList.toggle("on",s.autorun);
+  $("#tokenDot").className="dot "+(s.token_valid?"ok":"bad");
+  $("#tokenTxt").textContent=s.token_valid?"token valid":"login";
+  updateLogin(s);
+  $("#alertCount").textContent=s.alert_count;
+  $("#statusScan").textContent="last scan: "+(s.last_scan||"—");
+  $("#statusMode").textContent="mode: "+s.mode+(s.kill_switch?" · KILL":"")+(s.live?` · ◉ LIVE ${s.live_tf} ${s.live_count}/${s.live_ticks}t`:"")+(s.autorun?` · ⟳ AUTO ${Math.round(s.autorun_interval/60)}m ${s.market_open?"(scanning)":"(idle — market closed)"}`:"");
+  $("#armWarn").textContent=s.armed?"⚠ LIVE TRADING ARMED":(s.kill_switch?"⚠ kill-switch engaged":"");
+  const sb=$("#scanBtn");isScanning=s.scanning;
+  if(s.scanning){sb.disabled=false;sb.classList.add("stopping");sb.textContent=`■ STOP  ${s.scan_done}/${s.scan_total}`;}
+  else{sb.disabled=false;sb.classList.remove("stopping");sb.textContent="▶ RUN SCAN";}
+  window._limits=s.limits;
+  const sel=$("#segment");
+  if(!sel.dataset.built){sel.innerHTML=s.segments.map(x=>`<option>${x}</option>`).join("");sel.value=s.segment;sel.dataset.built="1";}
+}
+async function loadAlerts(){
+  const {alerts}=await api("/api/alerts");
+  $("#alertCount").textContent=alerts.length;
+  const el=$("#alerts");
+  if(!alerts.length){el.innerHTML=`<div class="empty">No alerts — pick a filter and hit <b>RUN SCAN</b>.</div>`;return;}
+  el.innerHTML=alerts.map(a=>
+    `<div class="alert ${a.direction}${a.near?' near':''}${a.new?' isnew':''}" data-sym="${a.symbol}" data-tf="${a.tf}">
+      <span class="tag">${a.action}</span>
+      <div class="body"><div class="top"><span class="sym">${a.symbol} <span class="chip">${a.tf}</span>${a.new?' <span class="newb">NEW</span>':''}</span><span class="t mono">🕒 ${a.ts}${a.age_min!=null?` · ${a.age_min<=0?'now':a.age_min+'m ago'}`:''}</span></div>
+      <div class="msg">${a.message}</div></div></div>`).join("");
+}
+
+async function init(){
+  initChart();
+  await loadState();
+  await loadUniverse($("#segment").value);
+  renderWatchlist();
+  await chartTo(watchlist[0]||"RELIANCE","15min");
+  await loadAlerts();
+
+  $("#segment").onchange=e=>loadUniverse(e.target.value);
+  $("#search").oninput=renderStockList;   // filter within the selected segment
+  $("#stockList").onclick=e=>{
+    const add=e.target.closest("[data-add]");
+    if(add){const s=add.dataset.add;if(!watchlist.includes(s)){watchlist.push(s);saveWL();renderWatchlist();}return;}
+    const row=e.target.closest(".srow");if(row)chartTo(row.dataset.sym);
+  };
+  $("#watchlist").onclick=e=>{
+    const rm=e.target.closest("[data-rm]");
+    if(rm){watchlist=watchlist.filter(s=>s!==rm.dataset.rm);saveWL();renderWatchlist();return;}
+    const row=e.target.closest(".srow");if(row)chartTo(row.dataset.sym);
+  };
+  $("#alerts").onclick=e=>{const a=e.target.closest(".alert");if(a)chartTo(a.dataset.sym,a.dataset.tf);};
+  $("#tfBtns").querySelectorAll("button").forEach(b=>b.onclick=()=>chartTo(cur.symbol,b.dataset.tf));
+  $("#indis").onclick=e=>{
+    const c=e.target.closest(".chip-t"); if(!c)return;
+    const ind=c.dataset.ind, on=!c.classList.contains("on");
+    c.classList.toggle("on",on);
+    if(ind==="bands") bandsShow=on; else if(ind==="rsiline") rsiShow=on; else markerShow[ind]=on;
+    applyIndicators();
+  };
+  $("#scanBtn").onclick=async()=>{
+    const sb=$("#scanBtn");
+    if(isScanning){ await post("/api/scan/stop"); sb.textContent="stopping…"; return; }
+    isScanning=true; sb.classList.add("stopping"); sb.textContent="■ STOP  starting…";
+    const scanners=[...document.querySelectorAll('#scanners input:checked')].map(c=>c.dataset.sc);
+    await post("/api/scan",{segment:$("#segment").value, scanners, tf:$("#scanTf").value});
+    await loadAlerts(); await loadState();
+  };
+  $("#clearBtn").onclick=async()=>{await post("/api/alerts/clear");await loadAlerts();};
+  $("#armSwitch").onclick=async()=>{
+    const on=!$("#armSwitch").classList.contains("on");
+    if(on&&!confirm("Arm LIVE trading? Orders can be placed with real money."))return;
+    await post("/api/arm",{armed:on});await loadState();
+  };
+  $("#liveSwitch").onclick=async()=>{
+    const on=!$("#liveSwitch").classList.contains("on");
+    await post("/api/live",{on,segment:$("#segment").value,tf:$("#scanTf").value});await loadState();
+  };
+  $("#autoSwitch").onclick=async()=>{
+    const on=!$("#autoSwitch").classList.contains("on");
+    const scanners=[...document.querySelectorAll('#scanners input:checked')].map(c=>c.dataset.sc);
+    await post("/api/autorun",{on,interval:parseInt($("#autoInterval").value),segment:$("#segment").value,scanners,tf:$("#scanTf").value});
+    await loadState();
+  };
+  $("#killBtn").onclick=async()=>{if(confirm("Engage kill-switch? Halt all trading.")){await post("/api/kill");await loadState();}};
+  $("#loginSkip").onclick=(e)=>{e.preventDefault();loginDismissed=true;$("#loginScreen").style.display="none";};
+  const tokChip=$("#tokenTxt").parentElement;tokChip.style.cursor="pointer";tokChip.title="Upstox login";
+  tokChip.onclick=async()=>{const s=await api("/api/state");if(s.token_valid){if(confirm("Log out of Upstox? (live feed & options will stop)")){await post("/api/logout");await loadState();}}else{loginDismissed=false;loadState();}};
+
+  try{
+    const ws=new WebSocket(`ws://${location.host}/ws`);
+    ws.onmessage=e=>{const m=JSON.parse(e.data);
+      if(m.type==="alerts"){loadAlerts();}
+      if(m.type==="state"){loadState();}
+      if(m.type==="progress"){isScanning=true;const sb=$("#scanBtn");sb.disabled=false;sb.classList.add("stopping");sb.textContent=`■ STOP  ${m.done}/${m.total}`;}};
+  }catch(e){}
+  setInterval(()=>$("#clock").textContent=new Date().toLocaleTimeString(),1000);
+  setInterval(loadState,5000);   // keep live tick/bar counters fresh
+  setInterval(liveTick,2000);    // live chart: move the last candle off websocket ticks (no REST)
+}
+init();
+</script>
+</body>
+</html>
