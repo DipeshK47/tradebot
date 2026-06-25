@@ -11,6 +11,7 @@ for 15m/1h bar strategies). Controls (arm / kill) are wired to the real RiskEngi
 from __future__ import annotations
 
 import asyncio
+import base64
 import html
 import json
 import os
@@ -24,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from ..brokers.paper import PaperBroker
 from ..config import UpstoxConfig
@@ -197,6 +198,27 @@ class AppState:
 
 state = AppState()
 app = FastAPI(title="Trading Command Center")
+
+
+@app.middleware("http")
+async def _password_gate(request, call_next):
+    """Optional HTTP Basic Auth on EVERY request, enabled only when DASHBOARD_PASS is set.
+    REQUIRED before exposing the dashboard beyond localhost — it has ARM/KILL/scan controls.
+    Off by default (localhost-only use needs no password)."""
+    pw = os.environ.get("DASHBOARD_PASS", "")
+    if pw:
+        user = os.environ.get("DASHBOARD_USER", "admin")
+        hdr = request.headers.get("authorization", "")
+        ok = False
+        if hdr.startswith("Basic "):
+            try:
+                u, _, p = base64.b64decode(hdr[6:]).decode().partition(":")
+                ok = secrets.compare_digest(u, user) and secrets.compare_digest(p, pw)
+            except Exception:
+                ok = False
+        if not ok:
+            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="ALGODESK"'})
+    return await call_next(request)
 
 
 @app.on_event("startup")
