@@ -9,11 +9,16 @@ v2 API and will be validated on the first real fetch.
 from __future__ import annotations
 
 import json
+import os
+import re
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import deque
 from datetime import datetime
+from pathlib import Path
 
 from ..strategies.base import Candle
 
@@ -33,6 +38,59 @@ TIMEFRAME_MAP = {
     "30min": ("minutes", 30), "1hour": ("hours", 1), "day": ("days", 1),
 }
 
+# --- client-side throttle: Upstox allows 50/sec, 500/min, 2000/30min per user.
+# Stay well under the first two gates; the 30-min budget is protected by caching.
+_MAX_PER_SEC = 8
+_MAX_PER_MIN = 400
+_rate_lock = threading.Lock()
+_req_times: deque = deque()          # monotonic timestamps of the last minute's requests
+
+
+def _throttle():
+    while True:
+        with _rate_lock:
+            now = time.monotonic()
+            while _req_times and now - _req_times[0] > 60:
+                _req_times.popleft()
+            in_last_sec = sum(1 for t in _req_times if now - t < 1)
+            if in_last_sec < _MAX_PER_SEC and len(_req_times) < _MAX_PER_MIN:
+                _req_times.append(now)
+                return
+        time.sleep(0.1)
+
+
+# --- disk cache: historical candles can't change during the day (today's bars come
+# from the intraday endpoint), so re-scans shouldn't re-download 14-80 days of data.
+_CACHE_DIR = Path(os.environ.get(
+    "CANDLE_CACHE_DIR",
+    Path(__file__).resolve().parents[3] / "data" / "cache" / "candles"))
+_HIST_TTL = 6 * 3600      # seconds; keys include from/to dates, so they roll daily anyway
+_INTRA_TTL = 90           # forming bars: absorb back-to-back scans, stay near-live
+
+
+def _cache_key(*parts) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", "_".join(str(p) for p in parts))
+
+
+def _cache_get(key: str, ttl: float):
+    p = _CACHE_DIR / f"{key}.json"
+    try:
+        if time.time() - p.stat().st_mtime < ttl:
+            return json.loads(p.read_text())
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _cache_put(key: str, rows: list) -> None:
+    try:
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = _CACHE_DIR / f".{key}.tmp"
+        tmp.write_text(json.dumps(rows))
+        tmp.replace(_CACHE_DIR / f"{key}.json")
+    except OSError:
+        pass
+
 
 class UpstoxData:
     def __init__(self, access_token: str = "", timeout: float = 20.0):
@@ -47,12 +105,17 @@ class UpstoxData:
             headers["Authorization"] = f"Bearer {self._token}"
         req = urllib.request.Request(url, headers=headers)
         for attempt in range(3):
+            _throttle()
             try:
                 with urllib.request.urlopen(req, timeout=self._timeout) as r:
                     return json.loads(r.read().decode())
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < 2:      # rate limited -> back off and retry
-                    time.sleep(1.5 * (attempt + 1))
+                    try:
+                        wait = float(e.headers.get("Retry-After", ""))
+                    except (TypeError, ValueError):
+                        wait = 2.0 * (attempt + 1)
+                    time.sleep(min(wait, 15.0))
                     continue
                 body = e.read().decode(errors="replace")
                 raise RuntimeError(f"Upstox HTTP {e.code}: {body[:300]}") from e
@@ -76,9 +139,14 @@ class UpstoxData:
         if timeframe not in TIMEFRAME_MAP:
             raise ValueError(f"timeframe must be one of {sorted(TIMEFRAME_MAP)}")
         unit, interval = TIMEFRAME_MAP[timeframe]
-        ik = urllib.parse.quote(instrument_key, safe="")
-        url = f"{BASE_V3}/historical-candle/{ik}/{unit}/{interval}/{to_date}/{from_date}"
-        return self._parse_candles(self._get(url).get("data", {}).get("candles", []))
+        key = _cache_key("hist", instrument_key, unit, interval, from_date, to_date)
+        rows = _cache_get(key, _HIST_TTL)
+        if rows is None:
+            ik = urllib.parse.quote(instrument_key, safe="")
+            url = f"{BASE_V3}/historical-candle/{ik}/{unit}/{interval}/{to_date}/{from_date}"
+            rows = self._get(url).get("data", {}).get("candles", [])
+            _cache_put(key, rows)
+        return self._parse_candles(rows)
 
     def ltp(self, instrument_keys: list[str]) -> dict:
         """Batch last-traded-price: {instrument_key: last_price}. Needs a valid token.
@@ -102,9 +170,14 @@ class UpstoxData:
         if timeframe not in TIMEFRAME_MAP:
             raise ValueError(f"timeframe must be one of {sorted(TIMEFRAME_MAP)}")
         unit, interval = TIMEFRAME_MAP[timeframe]
-        ik = urllib.parse.quote(instrument_key, safe="")
-        url = f"{BASE_V3}/historical-candle/intraday/{ik}/{unit}/{interval}"
-        return self._parse_candles(self._get(url).get("data", {}).get("candles", []))
+        key = _cache_key("intra", instrument_key, unit, interval)
+        rows = _cache_get(key, _INTRA_TTL)
+        if rows is None:
+            ik = urllib.parse.quote(instrument_key, safe="")
+            url = f"{BASE_V3}/historical-candle/intraday/{ik}/{unit}/{interval}"
+            rows = self._get(url).get("data", {}).get("candles", [])
+            _cache_put(key, rows)
+        return self._parse_candles(rows)
 
     def historical_candles(self, instrument_key: str, interval: str,
                            from_date: str, to_date: str) -> list[Candle]:

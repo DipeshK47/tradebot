@@ -19,10 +19,13 @@ class Segment(str, Enum):
     INDEX = "INDEX"          # the indices themselves
 
 
-# --- SEED constituent lists (refresh from instrument master at runtime) ---
+# --- SEED constituent lists (fallbacks; live lists come from load_nifty50 /
+# load_banknifty below, which fetch the official NSE constituent CSVs) ---
+# Official Nifty Bank constituents as of 2026-07-13 (14 stocks).
 BANKNIFTY_STOCKS = [
-    "HDFCBANK", "ICICIBANK", "SBIN", "KOTAKBANK", "AXISBANK", "INDUSINDBK",
-    "BANKBARODA", "PNB", "AUBANK", "FEDERALBNK", "IDFCFIRSTB", "CANBK",
+    "AUBANK", "AXISBANK", "BANKBARODA", "CANBK", "FEDERALBNK", "HDFCBANK",
+    "ICICIBANK", "IDFCFIRSTB", "INDUSINDBK", "KOTAKBANK", "PNB", "SBIN",
+    "UNIONBANK", "YESBANK",
 ]
 
 # Representative subset only — NOT the full 50. Load the real list at runtime.
@@ -69,20 +72,73 @@ _UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 _CACHE = _Path(__file__).resolve().parents[2] / "data" / "cache" / "nse_equities.json"
 
+# Official Nifty 50 constituents as of 2026-07-13 (niftyindices.com). Notable vs
+# older lists: TATAMOTORS demerged -> TMPV (CV arm trades as TMCV, not in the index);
+# LTIM now trades as LTM but left the index; BPCL/BRITANNIA/DIVISLAB/HEROMOTOCO/
+# INDUSINDBK are out; BEL/ETERNAL/INDIGO/JIOFIN/MAXHEALTH/TMPV/TRENT are in.
 NIFTY50_FULL = [
-    "RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS", "ITC", "LT", "SBIN",
-    "BHARTIARTL", "KOTAKBANK", "AXISBANK", "HINDUNILVR", "BAJFINANCE", "MARUTI",
-    "SUNPHARMA", "NTPC", "TATAMOTORS", "HCLTECH", "TITAN", "POWERGRID", "ULTRACEMCO",
-    "ASIANPAINT", "ONGC", "TATASTEEL", "NESTLEIND", "M&M", "ADANIENT", "JSWSTEEL",
-    "WIPRO", "BAJAJFINSV", "COALINDIA", "ADANIPORTS", "GRASIM", "HINDALCO", "TECHM",
-    "BPCL", "DRREDDY", "BRITANNIA", "CIPLA", "EICHERMOT", "INDUSINDBK", "DIVISLAB",
-    "HEROMOTOCO", "APOLLOHOSP", "BAJAJ-AUTO", "TATACONSUM", "SBILIFE", "HDFCLIFE",
-    "LTIM", "SHRIRAMFIN",
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
+    "BAJAJ-AUTO", "BAJAJFINSV", "BAJFINANCE", "BEL", "BHARTIARTL", "CIPLA",
+    "COALINDIA", "DRREDDY", "EICHERMOT", "ETERNAL", "GRASIM", "HCLTECH",
+    "HDFCBANK", "HDFCLIFE", "HINDALCO", "HINDUNILVR", "ICICIBANK", "INDIGO",
+    "INFY", "ITC", "JIOFIN", "JSWSTEEL", "KOTAKBANK", "LT", "M&M", "MARUTI",
+    "MAXHEALTH", "NESTLEIND", "NTPC", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE",
+    "SBIN", "SHRIRAMFIN", "SUNPHARMA", "TATACONSUM", "TATASTEEL", "TCS", "TECHM",
+    "TITAN", "TMPV", "TRENT", "ULTRACEMCO", "WIPRO",
 ]
 
 
 _CACHE_IDX = _CACHE.parent / "nse_indices.json"
 _MASTER_MEMO = None
+
+# --- official index-constituent lists (niftyindices.com CSVs) -----------------
+# Index memberships change every rebalance (and symbols get renamed — TATAMOTORS
+# -> TMPV, LTIM -> LTM), so the hardcoded lists above are FALLBACKS only.
+_N50_URL = "https://niftyindices.com/IndexConstituent/ind_nifty50list.csv"
+_BANK_URL = "https://niftyindices.com/IndexConstituent/ind_niftybanklist.csv"
+_CACHE_N50 = _CACHE.parent / "nifty50_constituents.json"
+_CACHE_BANK = _CACHE.parent / "niftybank_constituents.json"
+_CONSTITUENT_TTL_DAYS = 7
+
+
+def _constituents(url: str, cache: _Path, fallback: list) -> list:
+    """Official constituent symbols for one index: fresh disk cache -> download ->
+    stale disk cache -> hardcoded fallback. Never raises."""
+    import csv as _csv
+    import io as _io
+    import time as _time
+    try:
+        if cache.exists() and _time.time() - cache.stat().st_mtime < _CONSTITUENT_TTL_DAYS * 86400:
+            return _json.loads(cache.read_text())
+    except Exception:
+        pass
+    try:
+        raw = _req.urlopen(_req.Request(url, headers={"User-Agent": _UA}), timeout=30).read()
+        syms = sorted({r["Symbol"].strip()
+                       for r in _csv.DictReader(_io.StringIO(raw.decode("utf-8-sig")))
+                       if r.get("Symbol", "").strip()})
+        if len(syms) >= 10:                     # sanity: a real constituent file
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(_json.dumps(syms))
+            return syms
+    except Exception:
+        pass
+    try:
+        if cache.exists():                      # stale cache still beats the seed list
+            return _json.loads(cache.read_text())
+    except Exception:
+        pass
+    return list(fallback)
+
+
+def load_nifty50() -> list:
+    """Current official Nifty 50 constituent symbols (cached weekly)."""
+    return _constituents(_N50_URL, _CACHE_N50, NIFTY50_FULL)
+
+
+def load_banknifty() -> list:
+    """Current official Nifty Bank constituent symbols (cached weekly)."""
+    return _constituents(_BANK_URL, _CACHE_BANK, BANKNIFTY_STOCKS)
 
 
 def _load_master():

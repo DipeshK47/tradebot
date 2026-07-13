@@ -38,8 +38,9 @@ from ..scanners.prev_day_break import PrevDayBreakScanner
 from ..scanners.rsi_momentum import RsiMomentumScanner
 from ..data.upstox_feed import UpstoxFeed
 from ..live import LiveScanEngine
-from ..universe import (BANKNIFTY_STOCKS, NIFTY50_FULL, atm_options, load_bse_indices,
-                        load_equities, load_fo, load_fno_underlyings, load_indices, load_options,
+from ..universe import (atm_options, load_banknifty, load_bse_indices,
+                        load_equities, load_fo, load_fno_underlyings, load_indices,
+                        load_nifty50, load_options,
                         option_underlying_keys, option_underlying_map)
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -177,8 +178,8 @@ class AppState:
         self.merged = {**all_idx, **opt, **fut, **eq}   # chart any equity/index/option/future
         self.segments = {
             "All stocks": sorted(eq),
-            "Nifty 50": [s for s in NIFTY50_FULL if s in eq],
-            "Bank Nifty": [s for s in BANKNIFTY_STOCKS if s in eq],
+            "Nifty 50": [s for s in load_nifty50() if s in eq],
+            "Bank Nifty": [s for s in load_banknifty() if s in eq],
             "Indices": sorted(all_idx),
             "F&O": [s for s in fno if s in self.merged],
             "Futures": sorted(fut),
@@ -272,6 +273,7 @@ def _chart_markers(symbol: str, tf: str, cs: list) -> list[dict]:
                               "position": "belowBar" if up else "aboveBar",
                               "color": "#3fb950" if up else "#f85149",
                               "shape": "arrowUp" if up else "arrowDown",
+                              "high": c.high, "low": c.low,
                               "text": _marker_text(a)})
     marks.sort(key=lambda m: m["time"])
     return marks

@@ -17,7 +17,8 @@
   header{grid-area:head;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--border)}
   #side{grid-area:side;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
   #main{grid-area:main;display:flex;flex-direction:column;min-width:0}
-  #right{grid-area:right;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  #right{grid-area:right;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
+         align-self:start;max-height:100%;border-bottom:1px solid var(--border);border-bottom-left-radius:8px}
   footer{grid-area:foot;display:flex;align-items:center;gap:18px;padding:0 14px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font-size:11px}
   .logo{font-weight:700;letter-spacing:.5px}.logo span{color:var(--accent)}
   .badge{padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.4px}
@@ -80,7 +81,6 @@
   .alert.isnew{border-left:2px solid #3fb950}
   .alert .t{color:var(--muted);font-size:11px}
   .alert .msg{color:var(--muted);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .port{border-top:1px solid var(--border);display:flex;flex-direction:column}
   .kv{display:flex;justify-content:space-between;padding:5px 12px;font-size:12px}.kv .v{font-weight:600}
   .bar{height:6px;background:#21262d;border-radius:3px;margin:3px 12px 8px;overflow:hidden}.bar>div{height:100%;background:var(--accent)}
   .empty{padding:14px 12px;color:var(--muted);text-align:center;font-size:12px}
@@ -193,14 +193,6 @@
     <div class="rhead"><h3>Live Alerts <span id="alertCount" class="count">0</span></h3>
       <button id="clearBtn" style="padding:3px 9px;font-size:11px">clear</button></div>
     <div id="alerts"><div class="empty">No alerts yet — pick a filter and hit <b>RUN SCAN</b>.</div></div>
-    <div class="port">
-      <div class="rhead"><h3>Portfolio</h3><span id="modeMini" class="mono count"></span></div>
-      <div class="kv"><span style="color:var(--muted)">Cash</span><span class="v mono" id="cash">₹0</span></div>
-      <div class="kv"><span style="color:var(--muted)">Open positions</span><span class="v mono" id="posCount">0</span></div>
-      <div class="kv"><span style="color:var(--muted)">Exposure / limit</span><span class="v mono" id="expTxt">₹0 / ₹0</span></div>
-      <div class="bar"><div id="expBar" style="width:0%"></div></div>
-      <div id="positions"></div>
-    </div>
   </aside>
 
   <footer>
@@ -248,10 +240,21 @@ function initChart(){
         color:(lv===60||lv===40)?"#a371f7aa":"#30363d",lineWidth:1,lineStyle:lv===50?3:2,
         axisLabelVisible:true,title:String(lv)}));
 }
+let alertHL=[];   // dashed price-lines at the alert candle's high/low
 function applyIndicators(){
   [sUp,sMid,sLo].forEach(s=>s.applyOptions({visible:bandsShow}));
   sRsi.applyOptions({visible:rsiShow});
-  candle.setMarkers(chartMarkers.filter(m=>markerShow[m.kind]!==false));
+  const vis=chartMarkers.filter(m=>markerShow[m.kind]!==false);
+  candle.setMarkers(vis);
+  alertHL.forEach(l=>{try{candle.removePriceLine(l);}catch(e){}});
+  alertHL=[];
+  const m=[...vis].reverse().find(x=>x.high!=null&&x.low!=null);  // latest alert on this chart
+  if(m){
+    alertHL.push(candle.createPriceLine({price:m.high,color:m.color,lineWidth:1,lineStyle:2,
+      axisLabelVisible:true,title:`${m.text} H`}));
+    alertHL.push(candle.createPriceLine({price:m.low,color:m.color,lineWidth:1,lineStyle:2,
+      axisLabelVisible:true,title:`${m.text} L`}));
+  }
 }
 function zoomCurrentDay(cs){
   // open the chart zoomed to TODAY's session (chart-time is IST-shifted, so day floor = IST midnight)
@@ -365,7 +368,6 @@ async function loadState(){
   $("#alertCount").textContent=s.alert_count;
   $("#statusScan").textContent="last scan: "+(s.last_scan||"—");
   $("#statusMode").textContent="mode: "+s.mode+(s.kill_switch?" · KILL":"")+(s.live?` · ◉ LIVE ${s.live_tf} ${s.live_count}/${s.live_ticks}t`:"")+(s.autorun?` · ⟳ AUTO ${Math.round(s.autorun_interval/60)}m ${s.market_open?"(scanning)":"(idle — market closed)"}`:"");
-  $("#modeMini").textContent=s.mode.toUpperCase();
   $("#armWarn").textContent=s.armed?"⚠ LIVE TRADING ARMED":(s.kill_switch?"⚠ kill-switch engaged":"");
   const sb=$("#scanBtn");isScanning=s.scanning;
   if(s.scanning){sb.disabled=false;sb.classList.add("stopping");sb.textContent=`■ STOP  ${s.scan_done}/${s.scan_total}`;}
@@ -385,24 +387,13 @@ async function loadAlerts(){
       <div class="body"><div class="top"><span class="sym">${a.symbol} <span class="chip">${a.tf}</span>${a.new?' <span class="newb">NEW</span>':''}</span><span class="t mono">🕒 ${a.ts}${a.age_min!=null?` · ${a.age_min<=0?'now':a.age_min+'m ago'}`:''}</span></div>
       <div class="msg">${a.message}</div></div></div>`).join("");
 }
-async function loadPositions(){
-  const d=await api("/api/positions");
-  $("#cash").textContent="₹"+Math.round(d.cash).toLocaleString("en-IN");
-  $("#posCount").textContent=d.positions.length;
-  const exp=d.positions.reduce((s,p)=>s+Math.abs(p.qty)*p.avg_price,0);
-  const lim=(window._limits||{}).max_total_exposure_value||1;
-  $("#expTxt").textContent=`₹${Math.round(exp).toLocaleString("en-IN")} / ₹${lim.toLocaleString("en-IN")}`;
-  $("#expBar").style.width=Math.min(100,exp/lim*100)+"%";
-  $("#positions").innerHTML=d.positions.length?d.positions.map(p=>`<div class="kv"><span>${p.symbol} ×${p.qty}</span><span class="v mono">₹${p.avg_price.toFixed(1)}</span></div>`).join(""):`<div class="empty">No open positions</div>`;
-}
-
 async function init(){
   initChart();
   await loadState();
   await loadUniverse($("#segment").value);
   renderWatchlist();
   await chartTo(watchlist[0]||"RELIANCE","15min");
-  await loadAlerts(); await loadPositions();
+  await loadAlerts();
 
   $("#segment").onchange=e=>loadUniverse(e.target.value);
   $("#search").oninput=renderStockList;   // filter within the selected segment
@@ -457,7 +448,7 @@ async function init(){
   try{
     const ws=new WebSocket(`ws://${location.host}/ws`);
     ws.onmessage=e=>{const m=JSON.parse(e.data);
-      if(m.type==="alerts"){loadAlerts();loadPositions();}
+      if(m.type==="alerts"){loadAlerts();}
       if(m.type==="state"){loadState();}
       if(m.type==="progress"){isScanning=true;const sb=$("#scanBtn");sb.disabled=false;sb.classList.add("stopping");sb.textContent=`■ STOP  ${m.done}/${m.total}`;}};
   }catch(e){}
