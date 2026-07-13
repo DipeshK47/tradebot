@@ -218,7 +218,7 @@ async def _password_gate(request, call_next):
             except Exception:
                 ok = False
         if not ok:
-            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="ALGODESK"'})
+            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="GARUDA"'})
     return await call_next(request)
 
 

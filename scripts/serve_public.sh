@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serve ALGODESK over a FREE Cloudflare quick-tunnel (macOS/Linux) — no card, no account.
+# Serve GARUDA over a FREE Cloudflare quick-tunnel (macOS/Linux) — no card, no account.
 #   bash scripts/serve_public.sh
 # Requires: DASHBOARD_PASS set in .env, and cloudflared (macOS: brew install cloudflared).
 # Prints an https://….trycloudflare.com URL — open it from any browser, enter the password.

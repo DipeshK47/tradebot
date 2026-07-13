@@ -1,4 +1,4 @@
-# Deploying ALGODESK
+# Deploying GARUDA
 
 ## ⚠️ Not GitHub Pages
 This is a **live FastAPI (Python) backend** — it scans markets, holds an Upstox
@@ -19,13 +19,13 @@ from your laptop only to view the dashboard / log in.
    **VM.Standard.A1.Flex** (ARM, free up to 4 OCPU/24 GB — best) or, if A1 capacity is
    unavailable, **VM.Standard.E2.1.Micro** (1 OCPU/1 GB — always available; enough for
    the dashboard).
-3. **SSH keys**: on your laptop `ssh-keygen -t ed25519 -f ~/.ssh/algodesk`, upload
-   `~/.ssh/algodesk.pub`. Create the instance.
+3. **SSH keys**: on your laptop `ssh-keygen -t ed25519 -f ~/.ssh/garuda`, upload
+   `~/.ssh/garuda.pub`. Create the instance.
 4. **Networking → Reserve a static public IP** (convert the ephemeral IP to reserved).
 5. Leave the firewall CLOSED (only SSH/22). No need to open 8000 — we tunnel.
 
 ### B. Configure the app (one command on the VM)
-SSH in: `ssh -i ~/.ssh/algodesk ubuntu@<VM_IP>`, then:
+SSH in: `ssh -i ~/.ssh/garuda ubuntu@<VM_IP>`, then:
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/DipeshK47/tradebot/main/scripts/vps_setup.sh
 bash vps_setup.sh
@@ -35,13 +35,13 @@ This installs Python, clones the repo, makes a venv with the slim deps
 service. Then:
 ```bash
 nano ~/tradebot/.env          # set UPSTOX_API_KEY + UPSTOX_API_SECRET (leave redirect as-is)
-sudo systemctl restart algodesk
-systemctl status algodesk --no-pager
+sudo systemctl restart garuda
+systemctl status garuda --no-pager
 ```
 
 ### C. Open the dashboard (from your laptop)
 ```bash
-ssh -i ~/.ssh/algodesk -L 8000:127.0.0.1:8000 ubuntu@<VM_IP>
+ssh -i ~/.ssh/garuda -L 8000:127.0.0.1:8000 ubuntu@<VM_IP>
 ```
 Browse to `http://127.0.0.1:8000` → **Login with Upstox** (the token is captured and
 saved to `.env` on the VM automatically). Make sure `http://127.0.0.1:8000/auth/upstox/callback`
@@ -55,10 +55,10 @@ after a restart — turn it on in the UI each session (persistent autostart is a
 $100 credit/yr, no card. Same SSH-tunnel model; the bootstrap script is identical.
 1. Sign up: azure.microsoft.com/free/students (sign in with your school email).
 2. Portal → **Create a resource → Virtual machine**:
-   - Subscription **Azure for Students**, new resource group `algodesk-rg`
-   - Name `algodesk`, Region **Central India**, Image **Ubuntu Server 24.04 LTS**
+   - Subscription **Azure for Students**, new resource group `garuda-rg`
+   - Name `garuda`, Region **Central India**, Image **Ubuntu Server 24.04 LTS**
    - Size **Standard_B1s** (1 vCPU / 1 GiB)
-   - Auth **SSH public key**, username **`azureuser`**, paste `~/.ssh/algodesk.pub`
+   - Auth **SSH public key**, username **`azureuser`**, paste `~/.ssh/garuda.pub`
    - Inbound ports: **SSH (22) only** (do NOT open 8000 — we tunnel)
 3. After create, copy the **Public IP** from the VM Overview, then follow **B + C
    above** but SSH as **`azureuser@<IP>`** (not `ubuntu@`).

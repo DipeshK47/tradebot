@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Trading Command Center</title>
+<title>GARUDA — Trading Terminal</title>
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
   :root{--bg:#0a0e14;--panel:#0f141b;--panel2:#141b24;--border:#1f2937;--txt:#c9d1d9;
@@ -20,7 +20,7 @@
   #right{grid-area:right;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
          align-self:start;max-height:100%;border-bottom:1px solid var(--border);border-bottom-left-radius:8px}
   footer{grid-area:foot;display:flex;align-items:center;gap:18px;padding:0 14px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);font-size:11px}
-  .logo{font-weight:700;letter-spacing:.5px}.logo span{color:var(--accent)}
+  .logo{font-weight:700;letter-spacing:.5px}.logo span{color:var(--amber)}
   .badge{padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.4px}
   .badge.paper{background:#1f6feb33;color:#79c0ff;border:1px solid #1f6feb66}
   .badge.live{background:#f8514933;color:#ff7b72;border:1px solid #f8514966}
@@ -89,7 +89,7 @@
   /* login screen */
   #loginScreen{position:fixed;inset:0;z-index:9999;background:radial-gradient(1200px 600px at 50% -10%,#10202e,#070b11 70%);display:none;align-items:center;justify-content:center}
   .loginCard{width:380px;max-width:90vw;background:#0d1420;border:1px solid #1f2c3a;border-radius:14px;padding:34px 30px;text-align:center;box-shadow:0 24px 80px #000a}
-  .loginLogo{font-size:26px;font-weight:800;letter-spacing:1px;color:#e6edf3}.loginLogo span{color:var(--accent)}
+  .loginLogo{font-size:26px;font-weight:800;letter-spacing:1px;color:#e6edf3}.loginLogo span{color:var(--amber)}
   .loginSub{color:var(--muted);font-size:12.5px;margin:6px 0 22px}
   .loginBtn{display:block;background:linear-gradient(180deg,#7c5cff,#5b3df0);color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:9px;text-decoration:none;border:none;cursor:pointer}
   .loginBtn:hover{filter:brightness(1.08)}
@@ -104,8 +104,8 @@
 <body>
 <div id="loginScreen">
   <div class="loginCard">
-    <div class="loginLogo">⬡ ALGO<span>DESK</span></div>
-    <div class="loginSub">Indian market scanner &amp; trading command center</div>
+    <div class="loginLogo">⟁ GAR<span>UDA</span></div>
+    <div class="loginSub">eyes on every stock · strikes on the signal</div>
     <a href="/auth/upstox/login" class="loginBtn">🔒 Login with Upstox</a>
     <div class="loginNote">Connects your Upstox account for the <b>live feed</b>, <b>options</b> &amp; quotes.<br>Charts &amp; historical scans work without login.</div>
     <a href="#" id="loginSkip" class="loginSkip">Continue without login →</a>
@@ -114,7 +114,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="logo">⬡ ALGO<span>DESK</span></div>
+    <div class="logo">⟁ GAR<span>UDA</span></div>
     <span id="modeBadge" class="badge paper">PAPER</span>
     <span class="ctl">ARM <div id="armSwitch" class="switch"></div></span>
     <span class="ctl">LIVE <div id="liveSwitch" class="switch live"></div></span>
@@ -217,7 +217,9 @@ let chartMarkers=[];
 const markerShow={bollinger_breakout:true,rsi_momentum:true,prev_day_break:true,bollinger_outside:true};
 let bandsShow=true;
 let rsiShow=true;
-const WL_KEY="algodesk_watchlist";
+const WL_KEY="garuda_watchlist";
+if(!localStorage.getItem(WL_KEY)&&localStorage.getItem("algodesk_watchlist"))  // one-time migrate
+  localStorage.setItem(WL_KEY,localStorage.getItem("algodesk_watchlist"));
 let watchlist=JSON.parse(localStorage.getItem(WL_KEY)||'["RELIANCE","HDFCBANK","INFY","TCS"]');
 const saveWL=()=>localStorage.setItem(WL_KEY,JSON.stringify(watchlist));
 

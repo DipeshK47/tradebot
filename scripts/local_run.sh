@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run ALGODESK on ANY Mac/Linux laptop. First time on a new machine:
+# Run GARUDA on ANY Mac/Linux laptop. First time on a new machine:
 #   git clone https://github.com/DipeshK47/tradebot.git && cd tradebot
 #   bash scripts/local_run.sh          # builds venv + deps, creates .env (then edit it)
 #   bash scripts/local_run.sh          # runs the dashboard

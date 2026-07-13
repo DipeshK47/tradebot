@@ -1,4 +1,4 @@
-# ALGODESK — Setup (Windows)
+# GARUDA — Setup (Windows)
 
 Get the dashboard running and open it in a browser. Everything else (scanning, watchlist,
 autorun, live feed) you do inside the dashboard.

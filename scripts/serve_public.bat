@@ -1,5 +1,5 @@
 @echo off
-REM ===== Run ALGODESK publicly via a FREE Cloudflare tunnel (Windows) =====
+REM ===== Run GARUDA publicly via a FREE Cloudflare tunnel (Windows) =====
 REM Double-click this file. Requires: Python on PATH, DASHBOARD_PASS set in .env, and
 REM cloudflared (install once:  winget install --id Cloudflare.cloudflared).
 REM It runs the dashboard (scans + Telegram alerts) AND prints a public https URL.
@@ -34,7 +34,7 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000 ^| findstr LISTENING') 
 set "PYTHONPATH=src"
 set "DOTENV_PATH=.env"
 echo Starting dashboard in a background window...
-start "ALGODESK" /min cmd /c "%CD%\.venv\Scripts\python.exe scripts\run_dashboard.py"
+start "GARUDA" /min cmd /c "%CD%\.venv\Scripts\python.exe scripts\run_dashboard.py"
 timeout /t 6 >nul
 
 echo.

@@ -1,5 +1,5 @@
 @echo off
-REM ===== Run ALGODESK on Windows =====
+REM ===== Run GARUDA on Windows =====
 REM Requires Python (python.org, tick "Add python.exe to PATH" during install).
 REM Just DOUBLE-CLICK this file. First run builds everything + makes .env; edit .env
 REM (add your Upstox key/secret), then double-click again to launch.

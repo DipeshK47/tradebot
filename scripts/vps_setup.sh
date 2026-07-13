@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ALGODESK — one-shot setup on a fresh Ubuntu Oracle Always-Free VM.
+# GARUDA — one-shot setup on a fresh Ubuntu Oracle Always-Free VM.
 # Run as the default user (e.g. 'ubuntu'):
 #   curl -fsSLO https://raw.githubusercontent.com/DipeshK47/tradebot/main/scripts/vps_setup.sh
 #   bash vps_setup.sh
@@ -32,9 +32,9 @@ if [ ! -f .env ]; then
 fi
 
 echo "==> systemd service (auto-restart, starts on boot)"
-sudo tee /etc/systemd/system/algodesk.service >/dev/null <<UNIT
+sudo tee /etc/systemd/system/garuda.service >/dev/null <<UNIT
 [Unit]
-Description=ALGODESK dashboard
+Description=GARUDA dashboard
 After=network-online.target
 Wants=network-online.target
 [Service]
@@ -49,7 +49,7 @@ User=$USER
 WantedBy=multi-user.target
 UNIT
 sudo systemctl daemon-reload
-sudo systemctl enable algodesk
+sudo systemctl enable garuda
 
 cat <<NEXT
 
@@ -58,8 +58,8 @@ cat <<NEXT
      nano $APP/.env      # set UPSTOX_API_KEY and UPSTOX_API_SECRET, save (Ctrl-O, Enter, Ctrl-X)
      (Leave UPSTOX_REDIRECT_URI as http://127.0.0.1:8000/auth/upstox/callback)
 2) Start it:
-     sudo systemctl restart algodesk
-     systemctl status algodesk --no-pager
+     sudo systemctl restart garuda
+     systemctl status garuda --no-pager
 3) From YOUR LAPTOP (not the VM), open a tunnel and the dashboard:
      ssh -L 8000:127.0.0.1:8000 $USER@<VM_PUBLIC_IP>
      # then browse to  http://127.0.0.1:8000  and click 'Login with Upstox'
