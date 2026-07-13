@@ -22,18 +22,22 @@
   *::-webkit-scrollbar-track{background:transparent}
   *::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px;border:2px solid var(--panel)}
   *::-webkit-scrollbar-thumb:hover{background:#33425f}
-  #app{display:grid;grid-template-rows:54px 1fr 28px;grid-template-columns:266px 1fr 360px;
-       grid-template-areas:"head head head" "side main right" "foot foot foot";height:100vh}
-  header{grid-area:head;display:flex;align-items:center;gap:16px;padding:0 18px;background:linear-gradient(180deg,#0b101b,#090d15);
-         border-bottom:1px solid var(--border);position:relative}
-  header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
-         background:linear-gradient(90deg,transparent,#f0b43c33 18%,#f0b43c55 50%,#f0b43c33 82%,transparent)}
-  #side{grid-area:side;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-  #main{grid-area:main;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
-  #right{grid-area:right;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
-         align-self:start;max-height:100%;border-bottom:1px solid var(--border);border-bottom-left-radius:10px}
-  footer{grid-area:foot;display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--panel);border-top:1px solid var(--border);
-         color:var(--dim);font-size:11px;font-family:"JetBrains Mono",ui-monospace,monospace}
+  #app{display:grid;grid-template-rows:54px 1fr 22px;grid-template-columns:242px 1fr 348px;
+       grid-template-areas:"head head head" "side main right" "foot foot foot";height:100vh;
+       padding:10px;gap:10px;
+       background:radial-gradient(1100px 480px at 62% -18%,#f0b43c0d,transparent 62%),
+                  radial-gradient(800px 420px at -10% 110%,#0e1a3a55,transparent 60%),var(--bg)}
+  .card,header,#side,#main,#right{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+       box-shadow:0 10px 34px #00000059,inset 0 1px 0 #ffffff08}
+  header{grid-area:head;display:flex;align-items:center;gap:16px;padding:0 18px;
+         background:linear-gradient(180deg,#0c1120,#090d15);position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+         background:linear-gradient(90deg,transparent,#f0b43c40 30%,#f0b43c66 50%,#f0b43c40 70%,transparent)}
+  #side{grid-area:side;display:flex;flex-direction:column;overflow:hidden}
+  #main{grid-area:main;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  #right{grid-area:right;display:flex;flex-direction:column;overflow:hidden;align-self:start;max-height:100%}
+  footer{grid-area:foot;display:flex;align-items:center;gap:20px;padding:0 8px;
+         color:var(--dim);font-size:10.5px;letter-spacing:.4px;font-family:"JetBrains Mono",ui-monospace,monospace}
   /* brand */
   .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:2.5px}
   .logo svg{filter:drop-shadow(0 0 6px #f0b43c66)}
@@ -62,28 +66,43 @@
   select:focus,input.search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px #f0b43c22}
   input.search::placeholder{color:var(--dim)}
   .sec{padding:12px 14px;border-bottom:1px solid var(--border)}
-  .sec h3{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim);font-weight:700;margin-bottom:9px;display:flex;justify-content:space-between}
-  .listbox{flex:1;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+  .phead{padding:11px 14px 8px;display:flex;justify-content:space-between;align-items:center}
+  .phead h3,.sec h3{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:700;
+        display:flex;justify-content:space-between;flex:1}
+  .listbox{flex:1;min-height:0;display:flex;flex-direction:column}
+  .wlbox{max-height:32%;min-height:88px;display:flex;flex-direction:column;overflow:hidden;border-top:1px solid var(--border);
+        background:linear-gradient(180deg,#0b101c,#090d15);border-radius:0 0 14px 14px}
   .scroll{overflow-y:auto;flex:1}
   .srow{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;cursor:pointer;
-        border-left:2px solid transparent;transition:background .12s}
+        border-left:2px solid transparent;transition:background .12s;font-size:12.5px}
   .srow:hover{background:var(--panel2)}
-  .srow.active{background:#f0b43c14;border-left-color:var(--gold)}
+  .srow.active{background:#f0b43c12;border-left-color:var(--gold)}
   .srow .add{padding:0 7px;font-size:13px;line-height:1.6;border:none;background:transparent;color:var(--dim);box-shadow:none}
   .srow .add:hover{color:var(--green)}
   .wl .srow .rm{padding:0 7px;background:transparent;border:none;color:var(--dim);box-shadow:none}
   .wl .srow .rm:hover{color:var(--red)}
-  .scanbtn{width:100%;margin-top:10px;background:linear-gradient(135deg,#1d9e56,#23c56b);border:none;color:#fff;
-        font-weight:700;font-size:13px;letter-spacing:.8px;padding:11px;border-radius:9px;box-shadow:0 4px 18px #23c56b33}
-  .scanbtn:hover{filter:brightness(1.1);box-shadow:0 4px 24px #23c56b55}
+  /* command deck */
+  #deck{display:flex;align-items:center;gap:18px;padding:13px 18px;border-top:1px solid var(--border);
+        background:linear-gradient(180deg,#0b101c,#080c13);flex-wrap:wrap;border-radius:0 0 14px 14px}
+  .dsec{display:flex;align-items:center;gap:9px}
+  .dlbl{font-size:9px;letter-spacing:1.6px;color:var(--dim);font-weight:800;text-transform:uppercase}
+  #deck select{width:auto;min-width:104px;padding:7px 10px;font-size:12px}
+  .scanbtn{background:linear-gradient(135deg,#1d9e56,#23c56b);border:none;color:#fff;
+        font-weight:800;font-size:12.5px;letter-spacing:1.2px;padding:11px 30px;border-radius:10px;
+        box-shadow:0 4px 20px #23c56b3d;text-transform:uppercase}
+  .scanbtn:hover{filter:brightness(1.1);box-shadow:0 4px 26px #23c56b60}
   .scanbtn:disabled{opacity:.65;cursor:wait}
-  .scanbtn.stopping{background:linear-gradient(135deg,#c22e3e,#e04352);box-shadow:0 4px 18px #e0435233}
+  .scanbtn.stopping{background:linear-gradient(135deg,#c22e3e,#e04352);box-shadow:0 4px 20px #e0435240}
   .scanbtn.stopping:hover{filter:brightness(1.08)}
-  .chk{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:#b9c3d4;cursor:pointer}
-  .chk input{accent-color:var(--gold)}
-  .chk:hover{color:var(--txt)}
-  .mbar{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--border);background:var(--panel)}
-  .mbar .title{font-size:15px;font-weight:700;letter-spacing:.3px}
+  #scanners{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .chk{position:relative;display:inline-flex;align-items:center;font-size:11px;padding:5px 12px;border-radius:20px;
+        border:1px solid var(--border2);color:var(--dim);cursor:pointer;transition:.15s;user-select:none;white-space:nowrap}
+  .chk:hover{border-color:var(--gold);color:var(--muted)}
+  .chk input{position:absolute;opacity:0;pointer-events:none}
+  .chk:has(input:checked){background:#f0b43c16;border-color:#f0b43c66;color:var(--gold)}
+  .mbar{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border);
+        background:linear-gradient(180deg,#0b101c,#090d15);border-radius:14px 14px 0 0}
+  .mbar .title{font-size:16px;font-weight:800;letter-spacing:.4px}
   .tf{display:flex;gap:0;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:2px}
   .tf button{padding:4px 12px;font-size:12px;border:none;background:transparent;border-radius:6px;color:var(--muted);box-shadow:none}
   .tf button:hover{color:var(--txt);box-shadow:none}
@@ -94,8 +113,11 @@
   .chip-t{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--dim);cursor:pointer;user-select:none;transition:.15s}
   .chip-t:hover{border-color:var(--gold);color:var(--muted)}
   .chip-t.on{background:#f0b43c1a;border-color:#f0b43c66;color:var(--gold)}
-  .rhead{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-  .rhead h3{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim);font-weight:700}
+  .rhead{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;
+        background:linear-gradient(180deg,#0b101c,#090d15);border-radius:14px 14px 0 0}
+  .rhead h3{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:700;display:flex;align-items:center}
+  #alertCount{background:#f0b43c1c;color:var(--gold);border-radius:10px;padding:1px 8px;font-size:10px;font-weight:800;margin-left:7px;letter-spacing:0}
+  .searchsec{padding:12px 12px 11px;border-bottom:1px solid var(--border)}
   #alerts{flex:1;overflow-y:auto}
   .alert{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #10151f;align-items:flex-start;cursor:pointer;
          border-left:2px solid transparent;transition:background .12s}
@@ -176,45 +198,16 @@
   </header>
 
   <aside id="side">
-    <div class="sec">
-      <h3>Universe filter</h3>
-      <select id="segment"></select>
+    <div class="searchsec">
+      <input class="search" id="search" placeholder="⌕  Search symbols…" autocomplete="off"/>
     </div>
     <div class="listbox">
-      <div class="sec" style="border:none;padding-bottom:6px">
-        <h3>Stocks <span id="uniCount" class="count"></span></h3>
-        <input class="search" id="search" placeholder="search symbol…" autocomplete="off"/>
-      </div>
+      <div class="phead"><h3>Universe <span id="uniCount" class="count"></span></h3></div>
       <div class="scroll" id="stockList"></div>
     </div>
-    <div class="sec" style="max-height:30%;display:flex;flex-direction:column;overflow:hidden">
-      <h3>My Watchlist <span class="count" id="wlCount"></span></h3>
-      <div class="scroll wl" id="watchlist" style="margin:0 -12px"></div>
-    </div>
-    <div class="sec" id="scanners">
-      <h3>Scanners</h3>
-      <label class="chk"><input type="checkbox" data-sc="rsi_threshold" checked> RSI ≥ 60 (current)</label>
-      <label class="chk"><input type="checkbox" data-sc="rsi_momentum" checked> RSI momentum 50→60 (cross)</label>
-      <label class="chk"><input type="checkbox" data-sc="bollinger_breakout" checked> Bollinger breakout</label>
-      <label class="chk"><input type="checkbox" data-sc="prev_day_break" checked> Prev-day H/L break</label>
-      <label class="chk"><input type="checkbox" data-sc="bollinger_outside" checked> Bollinger outside band</label>
-      <label class="chk"><input type="checkbox" data-sc="option_rsi_confluence" checked> Options RSI ≥60 (opt &amp; underlying)</label>
-      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:12px">
-        <span style="color:var(--muted)">Timeframe</span>
-        <select id="scanTf" style="flex:1;padding:4px">
-          <option value="5min">5 min</option><option value="15min" selected>15 min</option>
-          <option value="30min">30 min</option><option value="1hour">1 hour</option>
-          <option value="day">day</option></select>
-      </div>
-      <button id="scanBtn" class="scanbtn">▶ RUN SCAN</button>
-      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:12px">
-        <span style="color:var(--muted)">⟳ Auto every</span>
-        <select id="autoInterval" style="flex:1;padding:4px">
-          <option value="300">5 min</option><option value="900" selected>15 min</option>
-          <option value="1800">30 min</option><option value="3600">1 hr</option>
-          <option value="86400">day</option></select>
-        <div id="autoSwitch" class="switch"></div>
-      </div>
+    <div class="wlbox">
+      <div class="phead"><h3>★ Watchlist <span class="count" id="wlCount"></span></h3></div>
+      <div class="scroll wl" id="watchlist"></div>
     </div>
   </aside>
 
@@ -238,6 +231,37 @@
       </div>
     </div>
     <div id="chart"></div>
+    <div id="deck">
+      <div class="dsec">
+        <span class="dlbl">Universe</span>
+        <select id="segment"></select>
+      </div>
+      <div class="dsec" id="scanners">
+        <span class="dlbl">Scanners</span>
+        <label class="chk"><input type="checkbox" data-sc="rsi_threshold" checked> RSI ≥60</label>
+        <label class="chk"><input type="checkbox" data-sc="rsi_momentum" checked> RSI 50→60</label>
+        <label class="chk"><input type="checkbox" data-sc="bollinger_breakout" checked> BB breakout</label>
+        <label class="chk"><input type="checkbox" data-sc="prev_day_break" checked> Prev-day H/L</label>
+        <label class="chk"><input type="checkbox" data-sc="bollinger_outside" checked> BB outside</label>
+        <label class="chk"><input type="checkbox" data-sc="option_rsi_confluence" checked> Opt RSI conf.</label>
+      </div>
+      <div class="dsec">
+        <span class="dlbl">TF</span>
+        <select id="scanTf">
+          <option value="5min">5 min</option><option value="15min" selected>15 min</option>
+          <option value="30min">30 min</option><option value="1hour">1 hour</option>
+          <option value="day">day</option></select>
+      </div>
+      <button id="scanBtn" class="scanbtn">▶ Run Scan</button>
+      <div class="dsec">
+        <span class="dlbl">⟳ Auto</span>
+        <select id="autoInterval">
+          <option value="300">5 min</option><option value="900" selected>15 min</option>
+          <option value="1800">30 min</option><option value="3600">1 hr</option>
+          <option value="86400">day</option></select>
+        <div id="autoSwitch" class="switch"></div>
+      </div>
+    </div>
   </main>
 
   <aside id="right">
