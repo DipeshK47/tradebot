@@ -34,7 +34,7 @@ def _load_env() -> dict:
     env: dict[str, str] = {}
     if not ENV.exists():
         return env
-    for line in ENV.read_text().splitlines():
+    for line in ENV.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -48,7 +48,7 @@ def _load_env() -> dict:
 
 def _write_token(token: str) -> None:
     """Replace (or append) the UPSTOX_ACCESS_TOKEN line, leaving everything else intact."""
-    lines = ENV.read_text().splitlines() if ENV.exists() else []
+    lines = ENV.read_text(encoding="utf-8").splitlines() if ENV.exists() else []
     out, found = [], False
     for line in lines:
         if line.strip().startswith("UPSTOX_ACCESS_TOKEN="):
@@ -58,7 +58,7 @@ def _write_token(token: str) -> None:
             out.append(line)
     if not found:
         out.append(f"UPSTOX_ACCESS_TOKEN={token}")
-    ENV.write_text("\n".join(out) + "\n")
+    ENV.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
 def main() -> int:

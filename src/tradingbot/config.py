@@ -16,7 +16,7 @@ def load_dotenv(path: str | None = None) -> None:
     p = Path(path or os.environ.get("DOTENV_PATH", ".env"))
     if not p.exists():
         return
-    for raw in p.read_text().splitlines():
+    for raw in p.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

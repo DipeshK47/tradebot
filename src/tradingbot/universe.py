@@ -109,7 +109,7 @@ def _constituents(url: str, cache: _Path, fallback: list) -> list:
     import time as _time
     try:
         if cache.exists() and _time.time() - cache.stat().st_mtime < _CONSTITUENT_TTL_DAYS * 86400:
-            return _json.loads(cache.read_text())
+            return _json.loads(cache.read_text(encoding="utf-8"))
     except Exception:
         pass
     try:
@@ -119,13 +119,13 @@ def _constituents(url: str, cache: _Path, fallback: list) -> list:
                        if r.get("Symbol", "").strip()})
         if len(syms) >= 10:                     # sanity: a real constituent file
             cache.parent.mkdir(parents=True, exist_ok=True)
-            cache.write_text(_json.dumps(syms))
+            cache.write_text(_json.dumps(syms), encoding="utf-8")
             return syms
     except Exception:
         pass
     try:
         if cache.exists():                      # stale cache still beats the seed list
-            return _json.loads(cache.read_text())
+            return _json.loads(cache.read_text(encoding="utf-8"))
     except Exception:
         pass
     return list(fallback)
@@ -154,13 +154,13 @@ def load_equities(force: bool = False) -> dict:
     """{trading_symbol: instrument_key} for all ~2,400 NSE equities (cached to disk)."""
     if not force and _CACHE.exists():
         try:
-            return _json.loads(_CACHE.read_text())
+            return _json.loads(_CACHE.read_text(encoding="utf-8"))
         except Exception:
             pass
     eq = {d["trading_symbol"]: d["instrument_key"] for d in _load_master()
           if d.get("segment") == "NSE_EQ" and d.get("instrument_type") == "EQ"}
     _CACHE.parent.mkdir(parents=True, exist_ok=True)
-    _CACHE.write_text(_json.dumps(eq))
+    _CACHE.write_text(_json.dumps(eq), encoding="utf-8")
     return eq
 
 
@@ -168,13 +168,13 @@ def load_indices(force: bool = False) -> dict:
     """{trading_symbol: instrument_key} for NSE indices (Nifty 50, Nifty Bank, ...)."""
     if not force and _CACHE_IDX.exists():
         try:
-            return _json.loads(_CACHE_IDX.read_text())
+            return _json.loads(_CACHE_IDX.read_text(encoding="utf-8"))
         except Exception:
             pass
     idx = {d["trading_symbol"]: d["instrument_key"] for d in _load_master()
            if d.get("segment") == "NSE_INDEX"}
     _CACHE_IDX.parent.mkdir(parents=True, exist_ok=True)
-    _CACHE_IDX.write_text(_json.dumps(idx))
+    _CACHE_IDX.write_text(_json.dumps(idx), encoding="utf-8")
     return idx
 
 
@@ -200,7 +200,7 @@ def load_bse_indices(force: bool = False) -> dict:
     master has no BSE names, so SENSEX is invisible without this. Cached to disk."""
     if not force and _CACHE_BSE_IDX.exists():
         try:
-            return _json.loads(_CACHE_BSE_IDX.read_text())
+            return _json.loads(_CACHE_BSE_IDX.read_text(encoding="utf-8"))
         except Exception:
             pass
     try:
@@ -211,7 +211,7 @@ def load_bse_indices(force: bool = False) -> dict:
     if idx:                                  # cache ONLY a real, successful download
         try:
             _CACHE_BSE_IDX.parent.mkdir(parents=True, exist_ok=True)
-            _CACHE_BSE_IDX.write_text(_json.dumps(idx))
+            _CACHE_BSE_IDX.write_text(_json.dumps(idx), encoding="utf-8")
         except Exception:
             pass
         return idx
@@ -256,7 +256,7 @@ def _fo_records(force: bool = False) -> list:
         return _FO_MEMO
     if not force and _CACHE_FO.exists():
         try:
-            _FO_MEMO = _json.loads(_CACHE_FO.read_text())
+            _FO_MEMO = _json.loads(_CACHE_FO.read_text(encoding="utf-8"))
             return _FO_MEMO
         except Exception:
             pass
@@ -267,7 +267,7 @@ def _fo_records(force: bool = False) -> list:
            if d.get("segment") == "NSE_FO" and d.get("instrument_type") in ("CE", "PE", "FUT")]
     _FO_MEMO = nse + _bse_index_fo()        # fold in SENSEX/BANKEX/SENSEX50 options
     _CACHE_FO.parent.mkdir(parents=True, exist_ok=True)
-    _CACHE_FO.write_text(_json.dumps(_FO_MEMO))
+    _CACHE_FO.write_text(_json.dumps(_FO_MEMO), encoding="utf-8")
     return _FO_MEMO
 
 
@@ -312,14 +312,14 @@ def load_fno_underlyings(force: bool = False) -> list:
     """Underlying symbols that have futures (the F&O tradable stock/index list, ~220)."""
     if not force and _CACHE_FNO.exists():
         try:
-            return _json.loads(_CACHE_FNO.read_text())
+            return _json.loads(_CACHE_FNO.read_text(encoding="utf-8"))
         except Exception:
             pass
     unds = sorted({d.get("underlying_symbol") for d in _load_master()
                    if d.get("segment") == "NSE_FO" and d.get("instrument_type") == "FUT"
                    and d.get("underlying_symbol")})
     _CACHE_FNO.parent.mkdir(parents=True, exist_ok=True)
-    _CACHE_FNO.write_text(_json.dumps(unds))
+    _CACHE_FNO.write_text(_json.dumps(unds), encoding="utf-8")
     return unds
 
 

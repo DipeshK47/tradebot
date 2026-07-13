@@ -225,7 +225,35 @@ async def _password_gate(request, call_next):
 @app.on_event("startup")
 async def _startup() -> None:
     state.loop = asyncio.get_running_loop()
-    asyncio.create_task(asyncio.to_thread(state.ensure_loaded))
+    asyncio.create_task(_boot())
+
+
+async def _boot() -> None:
+    """Load the universe, then auto-start the REAL-TIME websocket feed (if a token is valid)
+    and/or the periodic scan — all driven by .env, so the host runs hands-off on boot."""
+    await asyncio.to_thread(state.ensure_loaded)
+
+    # 1) REAL-TIME websocket tick feed (no delays): auto-connect if LIVE_SEGMENT is set AND the
+    #    daily token is valid. This is the live moving chart + instant bar-close alerts.
+    live_seg = os.environ.get("LIVE_SEGMENT", "").strip()
+    if live_seg and state.probe_token():
+        tf = _scan_tf(os.environ.get("LIVE_TF", os.environ.get("AUTORUN_TF", "15min")))
+        try:
+            state.live = await asyncio.to_thread(_start_live, live_seg, tf)
+            await broadcast({"type": "state"})
+        except Exception:
+            pass
+
+    # 2) Periodic REST scan (covers options/1h + a full snapshot) if AUTORUN_SEGMENT is set.
+    seg = os.environ.get("AUTORUN_SEGMENT", "").strip()
+    if seg:
+        interval = int(os.environ.get("AUTORUN_INTERVAL", "900"))
+        tf = _scan_tf(os.environ.get("AUTORUN_TF", "15min"))
+        scanners = [s.strip() for s in os.environ.get("AUTORUN_SCANNERS", "").split(",") if s.strip()]
+        state.autorun = True
+        state.autorun_interval = interval
+        state.autorun_task = asyncio.create_task(
+            _autorun_loop(interval, seg, scanners or None, tf))
 
 
 def _alert_dict(a, tf: str) -> dict:
@@ -654,7 +682,7 @@ async def _autorun_loop(interval: int, segment: str, scanners, tf: str = "15min"
 @app.get("/")
 def index() -> HTMLResponse:
     # no-store: the SPA's JS changes often; never let the browser serve a stale build
-    return HTMLResponse((STATIC / "index.html").read_text(),
+    return HTMLResponse((STATIC / "index.html").read_text(encoding="utf-8"),
                         headers={"Cache-Control": "no-store, max-age=0"})
 
 
@@ -672,7 +700,7 @@ def _write_env_token(token: str) -> None:
     shared secrets file."""
     p = _env_path()
     with _ENV_LOCK:
-        lines = p.read_text().splitlines() if p.exists() else []
+        lines = p.read_text(encoding="utf-8").splitlines() if p.exists() else []
         out, found = [], False
         for line in lines:
             if line.strip().startswith("UPSTOX_ACCESS_TOKEN="):

@@ -210,7 +210,7 @@ const api=async(p,o)=>(await fetch(p,o)).json();
 const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b||{})});
 let cur={symbol:"RELIANCE",tf:"15min"};
 let chart,candle,sUp,sMid,sLo,sRsi;
-let liveOn=false,lastBar=null,liveTf="15min";   // live websocket on? + chart's last candle + live timeframe
+let liveOn=false,lastBar=null,liveTf="15min",marketOpen=true;   // live on? + last candle + live tf + market open?
 let universeSyms=[];
 let isScanning=false;
 let chartMarkers=[];
@@ -301,7 +301,7 @@ async function chartTo(sym,tf){
 async function liveTick(){
   // Live-move only on 15-min: the server aggregator emits 15-min buckets, so 1h/day charts
   // would otherwise fold sub-hour ticks into a stale bar (they refresh on reload instead).
-  if(!liveOn || !candle || cur.tf!==liveTf) return;   // chart must match the live feed's timeframe
+  if(!liveOn || !candle || cur.tf!==liveTf || !marketOpen) return;   // chart must match the live feed's timeframe
   let d; try{ d=await api("/api/live/prices"); }catch(e){ return; }
   if(!d.live || !d.prices) return;
   const p=d.prices[cur.symbol];
@@ -360,7 +360,7 @@ async function loadState(){
   const s=await api("/api/state");
   const mb=$("#modeBadge");mb.textContent=s.mode.toUpperCase();mb.className="badge "+s.mode;
   $("#armSwitch").classList.toggle("on",s.armed);
-  $("#liveSwitch").classList.toggle("on",s.live);liveOn=s.live;liveTf=s.live_tf||"15min";
+  $("#liveSwitch").classList.toggle("on",s.live);liveOn=s.live;liveTf=s.live_tf||"15min";marketOpen=s.market_open;
   $("#autoSwitch").classList.toggle("on",s.autorun);
   $("#tokenDot").className="dot "+(s.token_valid?"ok":"bad");
   $("#tokenTxt").textContent=s.token_valid?"token valid":"login";
@@ -421,8 +421,24 @@ async function init(){
     if(isScanning){ await post("/api/scan/stop"); sb.textContent="stopping…"; return; }
     isScanning=true; sb.classList.add("stopping"); sb.textContent="■ STOP  starting…";
     const scanners=[...document.querySelectorAll('#scanners input:checked')].map(c=>c.dataset.sc);
-    await post("/api/scan",{segment:$("#segment").value, scanners, tf:$("#scanTf").value});
+    let r;
+    try{
+      r=await post("/api/scan",{segment:$("#segment").value, scanners, tf:$("#scanTf").value});
+    }catch(e){                                   // server unreachable / backend crash
+      isScanning=false; sb.classList.remove("stopping"); sb.textContent="▶ RUN SCAN";
+      alert("⚠ Scan failed — the server isn't reachable or the backend errored.\n\n"+(e&&e.message||e)+"\n\nIs the app window still running?");
+      return;
+    }
     await loadAlerts(); await loadState();
+    if(!r || r.detail || r.status==="error"){     // backend returned an error
+      alert("⚠ Scan failed (backend error):\n\n"+((r&&r.detail)||"unknown error"));
+    }else if(r.status==="already_running"){
+      alert("A scan is already running — wait for it to finish.");
+    }else if(r.errors>0){                          // couldn't fetch data for some symbols
+      alert(`⚠ Couldn't get data for ${r.errors} symbol(s).\n\nUsually Upstox rate-limiting — wait about a minute, then scan again.`);
+    }else if(r.alerts===0 && !marketOpen){         // market closed -> no fresh data to scan
+      alert("ℹ Market is closed (live 9:15 AM – 3:30 PM IST).\n\nNo fresh signals right now — there's no live data to scan. Try during market hours.");
+    }
   };
   $("#clearBtn").onclick=async()=>{await post("/api/alerts/clear");await loadAlerts();};
   $("#armSwitch").onclick=async()=>{
@@ -454,7 +470,7 @@ async function init(){
   }catch(e){}
   setInterval(()=>$("#clock").textContent=new Date().toLocaleTimeString(),1000);
   setInterval(loadState,5000);   // keep live tick/bar counters fresh
-  setInterval(liveTick,2000);    // live chart: move the last candle off websocket ticks (no REST)
+  setInterval(liveTick,1000);    // live chart: move the last candle off websocket ticks every 1s (no REST)
 }
 init();
 </script>
