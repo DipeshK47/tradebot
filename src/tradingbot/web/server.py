@@ -225,35 +225,7 @@ async def _password_gate(request, call_next):
 @app.on_event("startup")
 async def _startup() -> None:
     state.loop = asyncio.get_running_loop()
-    asyncio.create_task(_boot())
-
-
-async def _boot() -> None:
-    """Load the universe, then auto-start the REAL-TIME websocket feed (if a token is valid)
-    and/or the periodic scan — all driven by .env, so the host runs hands-off on boot."""
-    await asyncio.to_thread(state.ensure_loaded)
-
-    # 1) REAL-TIME websocket tick feed (no delays): auto-connect if LIVE_SEGMENT is set AND the
-    #    daily token is valid. This is the live moving chart + instant bar-close alerts.
-    live_seg = os.environ.get("LIVE_SEGMENT", "").strip()
-    if live_seg and state.probe_token():
-        tf = _scan_tf(os.environ.get("LIVE_TF", os.environ.get("AUTORUN_TF", "15min")))
-        try:
-            state.live = await asyncio.to_thread(_start_live, live_seg, tf)
-            await broadcast({"type": "state"})
-        except Exception:
-            pass
-
-    # 2) Periodic REST scan (covers options/1h + a full snapshot) if AUTORUN_SEGMENT is set.
-    seg = os.environ.get("AUTORUN_SEGMENT", "").strip()
-    if seg:
-        interval = int(os.environ.get("AUTORUN_INTERVAL", "900"))
-        tf = _scan_tf(os.environ.get("AUTORUN_TF", "15min"))
-        scanners = [s.strip() for s in os.environ.get("AUTORUN_SCANNERS", "").split(",") if s.strip()]
-        state.autorun = True
-        state.autorun_interval = interval
-        state.autorun_task = asyncio.create_task(
-            _autorun_loop(interval, seg, scanners or None, tf))
+    asyncio.create_task(asyncio.to_thread(state.ensure_loaded))
 
 
 def _alert_dict(a, tf: str) -> dict:
